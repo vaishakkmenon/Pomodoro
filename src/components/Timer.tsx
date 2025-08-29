@@ -70,22 +70,26 @@ export default function Timer() {
 
     return (
         <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="flex gap-2">
+            <div className="flex gap-6">
                 {/* LEFT: Vertical tabs */}
-                <nav className="w-40">
-                    <div className="flex flex-col gap-2">
-                        {(Object.keys(LABELS) as Tab[]).map(key => (
+                <nav className="w-44 self-stretch">
+                    <div className="flex h-full flex-col justify-evenly -mx-3">
+                        {(Object.keys(LABELS) as Tab[]).map((key) => (
                             <button
                                 key={key}
                                 type="button"
                                 onClick={() => switchTab(key)}
                                 aria-current={tab === key ? "page" : undefined}
                                 className={cx(
-                                    "w-full rounded-xl px-3 py-2 text-sm text-white text-left transition",
-                                    "focus-visible:outline-none focus-visible:ring-2",
-                                    tab === key
-                                        ? "bg-white/15 focus-visible:ring-white/30"
-                                        : "bg-white/5 hover:bg-white/10 focus-visible:ring-white/20"
+                                    // seamless, flat look
+                                    "relative block w-full text-left px-3 py-2 bg-transparent rounded-none text-white",
+                                    "hover:bg-white/5 transition",
+                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
+
+                                    // selected state + subtle left bar
+                                    tab === key &&
+                                    "bg-white/10 before:absolute before:left-0 before:inset-y-1 " +
+                                    "before:w-1 before:rounded-full before:bg-white/40"
                                 )}
                             >
                                 {LABELS[key]}
