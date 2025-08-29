@@ -54,26 +54,62 @@ export default function Timer() {
                 ? "text-emerald-200 ring-emerald-400/40"
                 : "text-sky-200 ring-sky-400/40";
 
+    // Editing state
     const [editing, setEditing] = useState(false);
     const [input, setInput] = useState("");
+    const [inputError, setInputError] = useState(false);
 
-    function parseMMSS(s: string): number | null {
-        const m = s.trim();
-        const mmss = /^(\d{1,3}):([0-5]?\d)$/.exec(m);
-        if (!mmss) return null;
-        const mins = parseInt(mmss[1], 10);
-        const secs = parseInt(mmss[2], 10);
+    // Allow only digits and a single colon while typing
+    function sanitizeTimeInput(s: string) {
+        const cleaned = s.replace(/[^\d:]/g, "");
+        const first = cleaned.indexOf(":");
+        if (first === -1) return cleaned;
+        // keep only the first colon
+        return cleaned.slice(0, first + 1) + cleaned.slice(first + 1).replace(/:/g, "");
+    }
+
+    // Flexible parser:
+    // - "MM:SS"  (SS 00–59)
+    // - digits-only length <= 2 => minutes
+    // - digits-only length >= 3 => (all but last 2) minutes + (last 2) seconds
+    function parseFlexibleTime(raw: string): number | null {
+        const s = raw.trim();
+        if (!s) return null;
+
+        if (s.includes(":")) {
+            const [mm, ss] = s.split(":");
+            if (!/^\d{1,3}$/.test(mm || "") || !/^\d{1,2}$/.test(ss || "")) return null;
+            const mins = parseInt(mm, 10);
+            const secs = parseInt(ss, 10);
+            if (secs >= 60) return null;
+            return mins * 60 + secs;
+        }
+
+        if (!/^\d+$/.test(s)) return null;
+        if (s.length <= 2) {
+            // treat as minutes
+            const mins = parseInt(s, 10);
+            return mins * 60;
+        }
+        // length >= 3 → last two digits are seconds
+        const secs = parseInt(s.slice(-2), 10);
+        if (secs >= 60) return null;
+        const mins = parseInt(s.slice(0, -2) || "0", 10);
         return mins * 60 + secs;
     }
 
     function commitEdit() {
-        const next = parseMMSS(input);
-        if (next != null) {
-            pause();
-            setSeconds(next);
+        const total = parseFlexibleTime(input);
+        if (total == null) {
+            setInputError(true);
+            return; // keep editing until valid
         }
+        setInputError(false);
+        pause();       // from hook
+        setSeconds(total); // from hook (clamps & pauses)
         setEditing(false);
     }
+
 
     // tablist keyboard nav (Up/Down inside tabs; handoff at edges)
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -224,7 +260,6 @@ export default function Timer() {
             </div>
 
             <div className={cx("flex transition-[gap] duration-700 ease-in-out", menuOpen ? "gap-6" : "gap-0")}>
-                {/* Sidebar (unchanged visuals) */}
                 <nav
                     id="sidebar-tabs"
                     aria-label="Session modes"
@@ -240,54 +275,53 @@ export default function Timer() {
                             role="tablist"
                             aria-orientation="vertical"
                             onKeyDown={onTabsKeyDown}
-                            className="relative rounded-2xl py-1"
+                            className="relative rounded-2xl"
                         >
-                            {/* Moving thumb — math fix: index * (ITEM_H + GAP) */}
+                            {/* Thumb: outline only, spans wrapper exactly */}
                             <div
                                 aria-hidden
                                 className={cx(
-                                    "pointer-events-none absolute left-1 right-1 top-1 rounded-xl",
-                                    "shadow-lg/5 ring-1 transition-transform duration-300 ease-out",
-                                    tab === "study" ? "bg-emerald-400/10 ring-emerald-300/40" : "bg-sky-400/10 ring-sky-300/40"
+                                    "pointer-events-none absolute left-[3px] right-[3px] top-0 rounded-full box-border",
+                                    "border transition-transform duration-300 ease-out",
+                                    tab === "study" ? "border-emerald-300/40" : "border-sky-300/40"
                                 )}
                                 style={{
-                                    height: ITEM_H,
+                                    height: ITEM_H, // 40 (h-10)
                                     transform: `translateY(${TABS.indexOf(tab) * (ITEM_H + GAP)}px)`,
                                 }}
                             />
 
-                            {/* Tab buttons */}
+                            {/* Buttons */}
                             <div className="relative z-10 flex flex-col gap-2">
                                 {TABS.map((key, idx) => {
                                     const tabId = `tab-${key}`;
                                     const selected = tab === key;
                                     const focused = focusIdx === idx;
+                                    const isStudy = key === "study";
+
                                     return (
-                                        <button
-                                            key={key}
-                                            id={tabId}
-                                            role="tab"
-                                            aria-selected={selected}
-                                            aria-controls="panel-session"
-                                            tabIndex={menuOpen && focused ? 0 : -1}
-                                            ref={(el) => {
-                                                tabRefs.current[idx] = el;
-                                            }}
-                                            type="button"
-                                            onClick={() => {
-                                                switchTab(key);
-                                                setFocusIdx(idx);
-                                            }}
-                                            className={cx(
-                                                "relative inline-flex w-full items-center",
-                                                "h-10 px-4 whitespace-nowrap rounded-xl",
-                                                "text-white/80 hover:text-white transition-colors",
-                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25",
-                                                selected && "text-white"
-                                            )}
-                                        >
-                                            <span className="truncate">{LABELS[key]}</span>
-                                        </button>
+                                        <div key={key} className="relative rounded-full px-[3px] overflow-hidden">
+                                            <button
+                                                id={tabId}
+                                                role="tab"
+                                                aria-selected={selected}
+                                                aria-controls="panel-session"
+                                                tabIndex={menuOpen && focused ? 0 : -1}
+                                                ref={(el) => { tabRefs.current[idx] = el; }}
+                                                type="button"
+                                                onClick={() => { switchTab(key); setFocusIdx(idx); }}
+                                                className={cx(
+                                                    "relative inline-flex w-full items-center justify-center text-center", // ← center horizontally
+                                                    "h-10 px-4 whitespace-nowrap rounded-[inherit]",
+                                                    selected ? (isStudy ? "bg-emerald-400/10" : "bg-sky-400/10") : "bg-transparent",
+                                                    "text-white/80 hover:text-white transition-colors",
+                                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ring-inset",
+                                                    selected && "text-white"
+                                                )}
+                                            >
+                                                <span className="truncate">{LABELS[key]}</span>
+                                            </button>
+                                        </div>
                                     );
                                 })}
                             </div>
@@ -319,9 +353,13 @@ export default function Timer() {
                             {!editing ? (
                                 <button
                                     type="button"
-                                    onClick={() => { setInput(formatTime(secondsLeft)); setEditing(true); }}
+                                    onClick={() => {
+                                        setInput(formatTime(secondsLeft));
+                                        setInputError(false);
+                                        setEditing(true);
+                                    }}
                                     className="inline-block min-w-[6ch] text-center align-middle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 rounded"
-                                    title="Click to edit time (MM:SS)"
+                                    title="Click to edit time (MM:SS). You can also type 2530 → 25:30 or 30 → 30:00"
                                 >
                                     {formatTime(secondsLeft)}
                                 </button>
@@ -329,17 +367,24 @@ export default function Timer() {
                                 <input
                                     autoFocus
                                     value={input}
-                                    onChange={(e) => setInput(e.target.value)}
+                                    onChange={(e) => {
+                                        const v = sanitizeTimeInput(e.target.value);
+                                        setInput(v);
+                                        // live-validate to clear the red state as soon as it's valid
+                                        setInputError(parseFlexibleTime(v) == null);
+                                    }}
                                     onFocus={(e) => e.currentTarget.select()}
                                     onBlur={commitEdit}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") commitEdit();
                                         else if (e.key === "Escape") setEditing(false);
                                     }}
-                                    // Keep width stable to "MM:SS"
-                                    className="inline-block w-[6ch] text-center bg-transparent border-b border-white/20 focus:border-white/40 outline-none caret-white align-middle"
+                                    className={cx(
+                                        "inline-block w-[6ch] text-center bg-transparent border-b outline-none caret-white align-middle",
+                                        inputError ? "border-red-400 focus:border-red-400" : "border-white/20 focus:border-white/40"
+                                    )}
                                     inputMode="numeric"
-                                    aria-label="Edit timer in MM:SS"
+                                    aria-label="Edit timer (MM:SS or digits like 2530)"
                                     placeholder="MM:SS"
                                 />
                             )}
@@ -376,7 +421,7 @@ export default function Timer() {
                         </PillButton>
                     </div>
                 </section>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
