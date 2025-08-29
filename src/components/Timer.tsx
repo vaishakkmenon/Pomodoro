@@ -8,7 +8,6 @@ import { useChime } from "../sound/useChime";
 type Tab = "study" | "short" | "long";
 const TABS: Tab[] = ["study", "short", "long"];
 
-
 const LABELS: Record<Tab, string> = {
     study: "Study Time",
     short: "Short Break",
@@ -37,7 +36,26 @@ export default function Timer() {
     const intervalRef = useRef<number | null>(null);
     const completedStudiesRef = useRef(0);
 
-    const { play: playChime, prime: primeAudio } = useChime("/sounds/windchimes.mp3", 0.28);
+    // tab focus management
+    const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+    const [focusIdx, setFocusIdx] = useState(() => TABS.indexOf(tab));
+    useEffect(() => {
+        setFocusIdx(TABS.indexOf(tab)); // keep roving focus in sync with selection
+    }, [tab]);
+
+    // focusable controls on the panel
+    const startBtnRef = useRef<HTMLButtonElement | null>(null);
+    const resetBtnRef = useRef<HTMLButtonElement | null>(null);
+
+    const startDisabled = secondsLeft === 0 && !isRunning;
+    const resetDisabled = secondsLeft === DURATIONS[tab];
+
+    // audio
+    const { play: playChime, prime: primeAudio } = useChime(
+        "/sounds/windchimes.mp3",
+        0.28
+    );
+
     function switchTab(next: Tab) {
         setIsRunning(false);
         setTab(next);
@@ -48,13 +66,15 @@ export default function Timer() {
         if (tab === "study") {
             playChime();
             completedStudiesRef.current += 1;
-            const next: Tab = completedStudiesRef.current % LONG_EVERY === 0 ? "long" : "short";
+            const next: Tab =
+                completedStudiesRef.current % LONG_EVERY === 0 ? "long" : "short";
             switchTab(next);
         } else {
             switchTab("study");
         }
     }
 
+    // ticking logic
     useEffect(() => {
         if (!isRunning) {
             if (intervalRef.current) window.clearInterval(intervalRef.current);
@@ -84,6 +104,81 @@ export default function Timer() {
         };
     }, [isRunning, tab]);
 
+    // tablist keyboard nav (Up/Down inside tabs; handoff at edges)
+    function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+        const target = e.target as HTMLElement;
+        if (target.getAttribute("role") !== "tab") return;
+
+        const last = TABS.length - 1;
+        let next = focusIdx;
+
+        switch (e.key) {
+            case "ArrowDown":
+                if (focusIdx === last) {
+                    // Long → Start → Reset → Study (skip disabled)
+                    if (!startDisabled) startBtnRef.current?.focus();
+                    else if (!resetDisabled) resetBtnRef.current?.focus();
+                    else { setFocusIdx(0); tabRefs.current[0]?.focus(); }
+                    e.preventDefault();
+                    return;
+                }
+                next = focusIdx + 1;
+                e.preventDefault();
+                break;
+
+            case "ArrowUp":
+                if (focusIdx === 0) {
+                    // Study → Reset → Start → Long (skip disabled)
+                    if (!resetDisabled) resetBtnRef.current?.focus();
+                    else if (!startDisabled) startBtnRef.current?.focus();
+                    else { setFocusIdx(last); tabRefs.current[last]?.focus(); }
+                    e.preventDefault();
+                    return;
+                }
+                next = focusIdx - 1;
+                e.preventDefault();
+                break;
+
+            case "Home": next = 0; e.preventDefault(); break;
+            case "End": next = last; e.preventDefault(); break;
+            default: return;
+        }
+
+        setFocusIdx(next);
+        tabRefs.current[next]?.focus();
+    }
+
+    // panel keyboard nav (Start/Reset ↔ tabs)
+    function onPanelKeyDown(e: React.KeyboardEvent<HTMLElement>) {
+        const t = e.target as HTMLElement;
+        const last = TABS.length - 1;
+
+        if (e.key === "ArrowDown") {
+            if (t === startBtnRef.current) {
+                // Start → Reset (or Study if Reset is disabled)
+                if (!resetDisabled) resetBtnRef.current?.focus();
+                else { setFocusIdx(0); tabRefs.current[0]?.focus(); }
+                e.preventDefault();
+            } else if (t === resetBtnRef.current) {
+                // Reset → Study
+                setFocusIdx(0); tabRefs.current[0]?.focus();
+                e.preventDefault();
+            }
+        } else if (e.key === "ArrowUp") {
+            if (t === resetBtnRef.current) {
+                // Reset → Start (or Long if Start disabled)
+                if (!startDisabled) startBtnRef.current?.focus();
+                else { setFocusIdx(last); tabRefs.current[last]?.focus(); }
+                e.preventDefault();
+            } else if (t === startBtnRef.current) {
+                // Start → Long
+                setFocusIdx(last); tabRefs.current[last]?.focus();
+                e.preventDefault();
+            }
+        }
+    }
+
+
     const phaseForAccent: Phase = tab === "study" ? "focus" : "break";
     const atFull = secondsLeft === DURATIONS[tab];
 
@@ -96,24 +191,34 @@ export default function Timer() {
                         className="flex h-full flex-col justify-evenly -mx-3"
                         role="tablist"
                         aria-orientation="vertical"
+                        onKeyDown={onTabsKeyDown}
                     >
-                        {TABS.map((key) => {
+                        {TABS.map((key, idx) => {
                             const tabId = `tab-${key}`;
+                            const selected = tab === key;
+                            const focused = focusIdx === idx;
+
                             return (
                                 <button
                                     key={key}
                                     id={tabId}
                                     role="tab"
-                                    aria-selected={tab === key}
+                                    aria-selected={selected}
                                     aria-controls="panel-session"
-                                    tabIndex={tab === key ? 0 : -1}
+                                    tabIndex={focused ? 0 : -1}
+                                    ref={(el) => {
+                                        tabRefs.current[idx] = el;
+                                    }}
                                     type="button"
-                                    onClick={() => switchTab(key)}
+                                    onClick={() => {
+                                        switchTab(key); // activate on click
+                                        setFocusIdx(idx); // keep roving focus in sync
+                                    }}
                                     className={cx(
                                         "relative block w-full text-left px-3 py-2 bg-transparent rounded-none text-white",
                                         "hover:bg-white/5 transition",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
-                                        tab === key &&
+                                        selected &&
                                         "bg-white/10 before:absolute before:left-0 before:inset-y-1 before:w-1 before:rounded-full before:bg-white/40"
                                     )}
                                 >
@@ -130,6 +235,7 @@ export default function Timer() {
                     role="tabpanel"
                     aria-labelledby={`tab-${tab}`}
                     className="flex-1"
+                    onKeyDown={onPanelKeyDown}
                 >
                     <div className="mb-6 text-center text-8xl font-bold tabular-nums">
                         {format(secondsLeft)}
@@ -137,6 +243,7 @@ export default function Timer() {
 
                     <div className="flex justify-center gap-3">
                         <PillButton
+                            ref={startBtnRef}
                             type="button"
                             phase={phaseForAccent}
                             onClick={() => {
@@ -151,6 +258,7 @@ export default function Timer() {
                         </PillButton>
 
                         <PillButton
+                            ref={resetBtnRef}
                             type="button"
                             phase={phaseForAccent}
                             variant="danger"
@@ -166,7 +274,7 @@ export default function Timer() {
                         </PillButton>
                     </div>
                 </section>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
