@@ -22,6 +22,17 @@ export function usePomodoroTimer(opts: Options = {}) {
     const completedStudies = useRef(0);
     const tickRef = useRef<number | null>(null);
 
+    // replace switchTab with this version:
+    const switchTab = (t: Tab) => {
+        if (tickRef.current) {
+        clearInterval(tickRef.current);
+        tickRef.current = null;
+        }
+        setIsRunning(false);
+        setTab(t);
+        setSecondsLeft(durations[t]);
+    };
+
     // keep seconds in sync if tab changes or durations change
     useEffect(() => {
         setSecondsLeft(durations[tab]);
@@ -67,10 +78,6 @@ export function usePomodoroTimer(opts: Options = {}) {
     const reset = () => {
         setIsRunning(false);
         setSecondsLeft(durations[tab]);
-    };
-    const switchTab = (t: Tab) => {
-        setIsRunning(false);
-        setTab(t);
     };
 
     const setSeconds = (n: number) => {
