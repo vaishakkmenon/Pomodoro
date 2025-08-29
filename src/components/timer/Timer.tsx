@@ -1,46 +1,38 @@
+// src/components/timer/Timer.tsx
 import { useEffect, useRef, useState } from "react";
-import PillButton from "./ui/PillButton";
-import type { Phase } from "../ui/types";
-import { cx } from "../ui/cx";
-import { useChime } from "../sound/useChime";
+import PillButton from "../ui/PillButton";
+import type { Phase } from "../../ui/types";
+import { cx } from "../../ui/cx";
+import { useChime } from "../../hooks/useChime";
 
-// Types and Constants
-type Tab = "study" | "short" | "long";
-const TABS: Tab[] = ["study", "short", "long"];
+import { TABS, LABELS, DURATIONS } from "../../config/timer";
+import { formatTime } from "../../lib/time";
+import { usePomodoroTimer } from "../../hooks/usePomodoroTimer";
 
-const LABELS: Record<Tab, string> = {
-    study: "Study Time",
-    short: "Short Break",
-    long: "Long Break",
-};
-
-const DURATIONS: Record<Tab, number> = {
-    study: 25 * 60,
-    short: 5 * 60,
-    long: 15 * 60,
-};
-
-const LONG_EVERY = 4;
-
-const ITEM_H = 40;
-const GAP = 8;
-
-function format(seconds: number) {
-    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-    const s = (seconds % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-}
+// Presentation-only (keep local)
+const ITEM_H = 40; // matches h-10
+const GAP = 8;     // matches gap-2
 
 export default function Timer() {
-    const [tab, setTab] = useState<Tab>("study");
-    const [secondsLeft, setSecondsLeft] = useState(DURATIONS.study);
-    const [isRunning, setIsRunning] = useState(false);
+    // use the timer engine, and chime only when a study session completes
+    const { play: playChime, prime: primeAudio } = useChime("/sounds/windchimes.mp3", 0.28);
+    const {
+        tab,
+        secondsLeft,
+        isRunning,
+        start,
+        pause,
+        reset,
+        switchTab,
+    } = usePomodoroTimer({
+        onComplete: (prevTab) => {
+            if (prevTab === "study") playChime();
+        },
+    });
+
     const [menuOpen, setMenuOpen] = useState(false);
 
-    const intervalRef = useRef<number | null>(null);
-    const completedStudiesRef = useRef(0);
-
-    // tab focus management
+    // tab focus management (unchanged)
     const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
     const [focusIdx, setFocusIdx] = useState(() => TABS.indexOf(tab));
     useEffect(() => {
@@ -51,66 +43,12 @@ export default function Timer() {
     const startBtnRef = useRef<HTMLButtonElement | null>(null);
     const resetBtnRef = useRef<HTMLButtonElement | null>(null);
 
-    // audio
-    const { play: playChime, prime: primeAudio } = useChime(
-        "/sounds/windchimes.mp3",
-        0.28
-    );
-
     const isDone = secondsLeft === 0;
     const statusText = isDone
         ? "Finished"
         : isRunning
             ? LABELS[tab]
             : `${LABELS[tab]} — Paused`;
-
-    function switchTab(next: Tab) {
-        setIsRunning(false);
-        setTab(next);
-        setSecondsLeft(DURATIONS[next]);
-    }
-
-    function onComplete() {
-        if (tab === "study") {
-            playChime();
-            completedStudiesRef.current += 1;
-            const next: Tab =
-                completedStudiesRef.current % LONG_EVERY === 0 ? "long" : "short";
-            switchTab(next);
-        } else {
-            switchTab("study");
-        }
-    }
-
-    // ticking logic
-    useEffect(() => {
-        if (!isRunning) {
-            if (intervalRef.current) window.clearInterval(intervalRef.current);
-            intervalRef.current = null;
-            return;
-        }
-
-        intervalRef.current = window.setInterval(() => {
-            setSecondsLeft((prev) => {
-                if (prev <= 1) {
-                    if (intervalRef.current) {
-                        window.clearInterval(intervalRef.current);
-                        intervalRef.current = null;
-                    }
-                    onComplete();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => {
-            if (intervalRef.current) {
-                window.clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        };
-    }, [isRunning, tab]);
 
     // derive disabled states once per render (used in arrow-skip logic)
     const startDisabled = secondsLeft === 0 && !isRunning;
@@ -217,13 +155,10 @@ export default function Timer() {
         }
     }
 
-    // when toggling menu:
-    // - closing: if focus is in tabs, move to Start
-    // - opening: move focus to the selected tab
+    // toggling menu: keep your same focus behavior
     function toggleMenu() {
         const next = !menuOpen;
         setMenuOpen(next);
-        // defer until DOM updates
         requestAnimationFrame(() => {
             if (next) {
                 const idx = TABS.indexOf(tab);
@@ -241,11 +176,12 @@ export default function Timer() {
     const phaseForAccent: Phase = tab === "study" ? "focus" : "break";
     const cardMax = menuOpen ? "max-w-xl" : "max-w-lg";
 
-    const chipAccent = isDone
-        ? "text-white/80 ring-white/20"
-        : phaseForAccent === "focus"
-            ? "text-emerald-200 ring-emerald-400/40"
-            : "text-sky-200 ring-sky-400/40";
+    const chipAccent =
+        isDone
+            ? "text-white/80 ring-white/20"
+            : phaseForAccent === "focus"
+                ? "text-emerald-200 ring-emerald-400/40"
+                : "text-sky-200 ring-sky-400/40";
 
     return (
         <div
@@ -255,10 +191,8 @@ export default function Timer() {
                 cardMax
             )}
         >
-            {/* Header with hamburger */}
-            {/* Header with hamburger + inline status */}
+            {/* Header with hamburger + inline status (unchanged visuals) */}
             <div className="mb-4 flex items-center justify-between">
-                {/* LEFT: group the hamburger and the status */}
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
@@ -279,19 +213,14 @@ export default function Timer() {
                 </div>
             </div>
 
-            <div
-                className={cx(
-                    "flex transition-[gap] duration-700 ease-in-out",
-                    menuOpen ? "gap-6" : "gap-0"
-                )}
-            >
-                {/* Keep the sidebar mounted so width can animate; hide/freeze when closed */}
+            <div className={cx("flex transition-[gap] duration-700 ease-in-out", menuOpen ? "gap-6" : "gap-0")}>
+                {/* Sidebar (unchanged visuals) */}
                 <nav
                     id="sidebar-tabs"
                     aria-label="Session modes"
                     aria-hidden={!menuOpen}
                     className={cx(
-                        "self-stretch overflow-hidden", // keep this so shrinking just clips
+                        "self-stretch overflow-hidden",
                         "transition-[width,opacity] duration-700 ease-in-out motion-reduce:transition-none",
                         menuOpen ? "w-36 opacity-100" : "w-0 opacity-0 pointer-events-none"
                     )}
@@ -303,23 +232,21 @@ export default function Timer() {
                             onKeyDown={onTabsKeyDown}
                             className="relative rounded-2xl py-1"
                         >
+                            {/* Moving thumb — math fix: index * (ITEM_H + GAP) */}
                             <div
                                 aria-hidden
                                 className={cx(
                                     "pointer-events-none absolute left-1 right-1 top-1 rounded-xl",
                                     "shadow-lg/5 ring-1 transition-transform duration-300 ease-out",
-                                    tab === "study"
-                                        ? "bg-emerald-400/10 ring-emerald-300/40"
-                                        : "bg-sky-400/10 ring-sky-300/40"
+                                    tab === "study" ? "bg-emerald-400/10 ring-emerald-300/40" : "bg-sky-400/10 ring-sky-300/40"
                                 )}
                                 style={{
                                     height: ITEM_H,
-                                    transform: `translateY(${TABS.indexOf(tab) * (ITEM_H * GAP)
-                                        }px)`,
+                                    transform: `translateY(${TABS.indexOf(tab) * (ITEM_H + GAP)}px)`,
                                 }}
                             />
 
-                            {/* Actual buttons above the thumb */}
+                            {/* Tab buttons */}
                             <div className="relative z-10 flex flex-col gap-2">
                                 {TABS.map((key, idx) => {
                                     const tabId = `tab-${key}`;
@@ -334,7 +261,7 @@ export default function Timer() {
                                             aria-controls="panel-session"
                                             tabIndex={menuOpen && focused ? 0 : -1}
                                             ref={(el) => {
-                                                tabRefs.current[idx] = el; // return void (TS happy)
+                                                tabRefs.current[idx] = el;
                                             }}
                                             type="button"
                                             onClick={() => {
@@ -358,7 +285,7 @@ export default function Timer() {
                     </div>
                 </nav>
 
-                {/* RIGHT: Timer */}
+                {/* Timer panel (unchanged visuals) */}
                 <section
                     id="panel-session"
                     role="tabpanel"
@@ -379,10 +306,9 @@ export default function Timer() {
                         </div>
 
                         <div className="text-8xl font-bold tabular-nums leading-none">
-                            {format(secondsLeft)}
+                            {formatTime(secondsLeft)}
                         </div>
                     </div>
-
 
                     <div className="flex justify-center gap-3">
                         <PillButton
@@ -391,11 +317,11 @@ export default function Timer() {
                             phase={phaseForAccent}
                             onClick={() => {
                                 primeAudio();
-                                setIsRunning((v) => !v);
+                                isRunning ? pause() : start();
                             }}
                             aria-pressed={isRunning}
                             className="min-w-28 justify-center !text-lg !px-4 !py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={secondsLeft === 0 && !isRunning}
+                            disabled={startDisabled}
                         >
                             {isRunning ? "Pause" : "Start"}
                         </PillButton>
@@ -405,10 +331,7 @@ export default function Timer() {
                             type="button"
                             phase={phaseForAccent}
                             variant="danger"
-                            onClick={() => {
-                                setIsRunning(false);
-                                setSecondsLeft(DURATIONS[tab]);
-                            }}
+                            onClick={() => reset()}
                             className="min-w-28 justify-center !text-lg !px-4 !py-2"
                             disabled={resetDisabled}
                             title={resetDisabled ? "Already reset" : "Reset timer"}

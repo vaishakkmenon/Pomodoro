@@ -1,5 +1,5 @@
 import React from "react";
-import Timer from "./components/Timer";
+import Timer from "./components/timer/Timer";
 
 const App: React.FC = () => {
   return (

@@ -1,28 +1,33 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    // Build/JS target
     "target": "ES2020",
-    "useDefineForClassFields": true,
+    // Libraries available in the browser
     "lib": [
       "ES2020",
       "DOM",
       "DOM.Iterable"
     ],
+    // Modules / bundler
     "module": "ESNext",
-    "skipLibCheck": true,
-    /* Bundler mode */
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
+    // React + Vite ergonomics
+    "jsx": "react-jsx",
+    "useDefineForClassFields": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react-jsx",
-    /* Linting */
+    "skipLibCheck": true,
+    // Lint-like strictness
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    // Important: do NOT pull Node types into the browser app
+    "types": []
   },
   "include": [
     "src"
