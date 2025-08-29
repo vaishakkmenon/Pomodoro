@@ -22,6 +22,9 @@ const DURATIONS: Record<Tab, number> = {
 
 const LONG_EVERY = 4;
 
+const ITEM_H = 40;
+const GAP = 8;
+
 function format(seconds: number) {
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
     const s = (seconds % 60).toString().padStart(2, "0");
@@ -32,6 +35,7 @@ export default function Timer() {
     const [tab, setTab] = useState<Tab>("study");
     const [secondsLeft, setSecondsLeft] = useState(DURATIONS.study);
     const [isRunning, setIsRunning] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const intervalRef = useRef<number | null>(null);
     const completedStudiesRef = useRef(0);
@@ -40,21 +44,25 @@ export default function Timer() {
     const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
     const [focusIdx, setFocusIdx] = useState(() => TABS.indexOf(tab));
     useEffect(() => {
-        setFocusIdx(TABS.indexOf(tab)); // keep roving focus in sync with selection
+        setFocusIdx(TABS.indexOf(tab));
     }, [tab]);
 
     // focusable controls on the panel
     const startBtnRef = useRef<HTMLButtonElement | null>(null);
     const resetBtnRef = useRef<HTMLButtonElement | null>(null);
 
-    const startDisabled = secondsLeft === 0 && !isRunning;
-    const resetDisabled = secondsLeft === DURATIONS[tab];
-
     // audio
     const { play: playChime, prime: primeAudio } = useChime(
         "/sounds/windchimes.mp3",
         0.28
     );
+
+    const isDone = secondsLeft === 0;
+    const statusText = isDone
+        ? "Finished"
+        : isRunning
+            ? LABELS[tab]
+            : `${LABELS[tab]} — Paused`;
 
     function switchTab(next: Tab) {
         setIsRunning(false);
@@ -104,8 +112,14 @@ export default function Timer() {
         };
     }, [isRunning, tab]);
 
+    // derive disabled states once per render (used in arrow-skip logic)
+    const startDisabled = secondsLeft === 0 && !isRunning;
+    const atFull = secondsLeft === DURATIONS[tab];
+    const resetDisabled = atFull;
+
     // tablist keyboard nav (Up/Down inside tabs; handoff at edges)
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+        if (!menuOpen) return; // no tabs when closed
         const target = e.target as HTMLElement;
         if (target.getAttribute("role") !== "tab") return;
 
@@ -118,7 +132,10 @@ export default function Timer() {
                     // Long → Start → Reset → Study (skip disabled)
                     if (!startDisabled) startBtnRef.current?.focus();
                     else if (!resetDisabled) resetBtnRef.current?.focus();
-                    else { setFocusIdx(0); tabRefs.current[0]?.focus(); }
+                    else {
+                        setFocusIdx(0);
+                        tabRefs.current[0]?.focus();
+                    }
                     e.preventDefault();
                     return;
                 }
@@ -131,7 +148,10 @@ export default function Timer() {
                     // Study → Reset → Start → Long (skip disabled)
                     if (!resetDisabled) resetBtnRef.current?.focus();
                     else if (!startDisabled) startBtnRef.current?.focus();
-                    else { setFocusIdx(last); tabRefs.current[last]?.focus(); }
+                    else {
+                        setFocusIdx(last);
+                        tabRefs.current[last]?.focus();
+                    }
                     e.preventDefault();
                     return;
                 }
@@ -139,93 +159,202 @@ export default function Timer() {
                 e.preventDefault();
                 break;
 
-            case "Home": next = 0; e.preventDefault(); break;
-            case "End": next = last; e.preventDefault(); break;
-            default: return;
+            case "Home":
+                next = 0;
+                e.preventDefault();
+                break;
+            case "End":
+                next = last;
+                e.preventDefault();
+                break;
+            default:
+                return; // don't swallow Enter/Space/Tab
         }
 
         setFocusIdx(next);
         tabRefs.current[next]?.focus();
     }
 
-    // panel keyboard nav (Start/Reset ↔ tabs)
+    // panel keyboard nav (Start/Reset ↔ tabs when open; bounce between buttons when closed)
     function onPanelKeyDown(e: React.KeyboardEvent<HTMLElement>) {
         const t = e.target as HTMLElement;
         const last = TABS.length - 1;
 
         if (e.key === "ArrowDown") {
             if (t === startBtnRef.current) {
-                // Start → Reset (or Study if Reset is disabled)
+                // Start → Reset (or Study if Reset disabled)
                 if (!resetDisabled) resetBtnRef.current?.focus();
-                else { setFocusIdx(0); tabRefs.current[0]?.focus(); }
+                else if (menuOpen) {
+                    setFocusIdx(0);
+                    tabRefs.current[0]?.focus();
+                }
                 e.preventDefault();
             } else if (t === resetBtnRef.current) {
-                // Reset → Study
-                setFocusIdx(0); tabRefs.current[0]?.focus();
-                e.preventDefault();
+                // Reset → Study (if menu open), otherwise do nothing
+                if (menuOpen) {
+                    setFocusIdx(0);
+                    tabRefs.current[0]?.focus();
+                    e.preventDefault();
+                }
             }
         } else if (e.key === "ArrowUp") {
             if (t === resetBtnRef.current) {
                 // Reset → Start (or Long if Start disabled)
                 if (!startDisabled) startBtnRef.current?.focus();
-                else { setFocusIdx(last); tabRefs.current[last]?.focus(); }
+                else if (menuOpen) {
+                    setFocusIdx(last);
+                    tabRefs.current[last]?.focus();
+                }
                 e.preventDefault();
             } else if (t === startBtnRef.current) {
-                // Start → Long
-                setFocusIdx(last); tabRefs.current[last]?.focus();
-                e.preventDefault();
+                // Start → Long (if menu open)
+                if (menuOpen) {
+                    setFocusIdx(last);
+                    tabRefs.current[last]?.focus();
+                    e.preventDefault();
+                }
             }
         }
     }
 
+    // when toggling menu:
+    // - closing: if focus is in tabs, move to Start
+    // - opening: move focus to the selected tab
+    function toggleMenu() {
+        const next = !menuOpen;
+        setMenuOpen(next);
+        // defer until DOM updates
+        requestAnimationFrame(() => {
+            if (next) {
+                const idx = TABS.indexOf(tab);
+                setFocusIdx(idx);
+                tabRefs.current[idx]?.focus();
+            } else {
+                const active = document.activeElement as HTMLElement | null;
+                if (active?.getAttribute("role") === "tab") {
+                    startBtnRef.current?.focus();
+                }
+            }
+        });
+    }
 
     const phaseForAccent: Phase = tab === "study" ? "focus" : "break";
-    const atFull = secondsLeft === DURATIONS[tab];
+    const cardMax = menuOpen ? "max-w-xl" : "max-w-lg";
+
+    const chipAccent = isDone
+        ? "text-white/80 ring-white/20"
+        : phaseForAccent === "focus"
+            ? "text-emerald-200 ring-emerald-400/40"
+            : "text-sky-200 ring-sky-400/40";
 
     return (
-        <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="flex gap-6">
-                {/* LEFT: Vertical tabs */}
-                <nav className="w-44 self-stretch" aria-label="Session modes">
-                    <div
-                        className="flex h-full flex-col justify-evenly -mx-3"
-                        role="tablist"
-                        aria-orientation="vertical"
-                        onKeyDown={onTabsKeyDown}
+        <div
+            className={cx(
+                "w-full rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur",
+                "transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none",
+                cardMax
+            )}
+        >
+            {/* Header with hamburger */}
+            {/* Header with hamburger + inline status */}
+            <div className="mb-4 flex items-center justify-between">
+                {/* LEFT: group the hamburger and the status */}
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={toggleMenu}
+                        aria-expanded={menuOpen}
+                        aria-controls="sidebar-tabs"
+                        className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
+                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                        title={menuOpen ? "Hide session tabs" : "Show session tabs"}
                     >
-                        {TABS.map((key, idx) => {
-                            const tabId = `tab-${key}`;
-                            const selected = tab === key;
-                            const focused = focusIdx === idx;
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <rect x="3" y="6" width="18" height="2" rx="1" />
+                            <rect x="3" y="11" width="18" height="2" rx="1" />
+                            <rect x="3" y="16" width="18" height="2" rx="1" />
+                        </svg>
+                        <span className="sr-only">Toggle session menu</span>
+                    </button>
+                </div>
+            </div>
 
-                            return (
-                                <button
-                                    key={key}
-                                    id={tabId}
-                                    role="tab"
-                                    aria-selected={selected}
-                                    aria-controls="panel-session"
-                                    tabIndex={focused ? 0 : -1}
-                                    ref={(el) => {
-                                        tabRefs.current[idx] = el;
-                                    }}
-                                    type="button"
-                                    onClick={() => {
-                                        switchTab(key); // activate on click
-                                        setFocusIdx(idx); // keep roving focus in sync
-                                    }}
-                                    className={cx(
-                                        "relative block w-full text-left px-3 py-2 bg-transparent rounded-none text-white",
-                                        "hover:bg-white/5 transition",
-                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
-                                        selected &&
-                                        "bg-white/10 before:absolute before:left-0 before:inset-y-1 before:w-1 before:rounded-full before:bg-white/40"
-                                    )}
-                                >
-                                    {LABELS[key]}
-                                </button>
-                            );
-                        })}
+            <div
+                className={cx(
+                    "flex transition-[gap] duration-700 ease-in-out",
+                    menuOpen ? "gap-6" : "gap-0"
+                )}
+            >
+                {/* Keep the sidebar mounted so width can animate; hide/freeze when closed */}
+                <nav
+                    id="sidebar-tabs"
+                    aria-label="Session modes"
+                    aria-hidden={!menuOpen}
+                    className={cx(
+                        "self-stretch overflow-hidden", // keep this so shrinking just clips
+                        "transition-[width,opacity] duration-700 ease-in-out motion-reduce:transition-none",
+                        menuOpen ? "w-36 opacity-100" : "w-0 opacity-0 pointer-events-none"
+                    )}
+                >
+                    <div className="w-36 flex-none">
+                        <div
+                            role="tablist"
+                            aria-orientation="vertical"
+                            onKeyDown={onTabsKeyDown}
+                            className="relative rounded-2xl py-1"
+                        >
+                            <div
+                                aria-hidden
+                                className={cx(
+                                    "pointer-events-none absolute left-1 right-1 top-1 rounded-xl",
+                                    "shadow-lg/5 ring-1 transition-transform duration-300 ease-out",
+                                    tab === "study"
+                                        ? "bg-emerald-400/10 ring-emerald-300/40"
+                                        : "bg-sky-400/10 ring-sky-300/40"
+                                )}
+                                style={{
+                                    height: ITEM_H,
+                                    transform: `translateY(${TABS.indexOf(tab) * (ITEM_H * GAP)
+                                        }px)`,
+                                }}
+                            />
+
+                            {/* Actual buttons above the thumb */}
+                            <div className="relative z-10 flex flex-col gap-2">
+                                {TABS.map((key, idx) => {
+                                    const tabId = `tab-${key}`;
+                                    const selected = tab === key;
+                                    const focused = focusIdx === idx;
+                                    return (
+                                        <button
+                                            key={key}
+                                            id={tabId}
+                                            role="tab"
+                                            aria-selected={selected}
+                                            aria-controls="panel-session"
+                                            tabIndex={menuOpen && focused ? 0 : -1}
+                                            ref={(el) => {
+                                                tabRefs.current[idx] = el; // return void (TS happy)
+                                            }}
+                                            type="button"
+                                            onClick={() => {
+                                                switchTab(key);
+                                                setFocusIdx(idx);
+                                            }}
+                                            className={cx(
+                                                "relative inline-flex w-full items-center",
+                                                "h-10 px-4 whitespace-nowrap rounded-xl",
+                                                "text-white/80 hover:text-white transition-colors",
+                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25",
+                                                selected && "text-white"
+                                            )}
+                                        >
+                                            <span className="truncate">{LABELS[key]}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </nav>
 
@@ -237,9 +366,23 @@ export default function Timer() {
                     className="flex-1"
                     onKeyDown={onPanelKeyDown}
                 >
-                    <div className="mb-6 text-center text-8xl font-bold tabular-nums">
-                        {format(secondsLeft)}
+                    <div className="flex flex-col items-center -mt-1 md:-mt-8 gap-4 mb-6">
+                        <div
+                            aria-live="polite"
+                            className={cx(
+                                "whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase",
+                                "ring-1 transition-colors",
+                                chipAccent
+                            )}
+                        >
+                            {statusText}
+                        </div>
+
+                        <div className="text-8xl font-bold tabular-nums leading-none">
+                            {format(secondsLeft)}
+                        </div>
                     </div>
+
 
                     <div className="flex justify-center gap-3">
                         <PillButton
@@ -267,8 +410,8 @@ export default function Timer() {
                                 setSecondsLeft(DURATIONS[tab]);
                             }}
                             className="min-w-28 justify-center !text-lg !px-4 !py-2"
-                            disabled={atFull}
-                            title={atFull ? "Already reset" : "Reset timer"}
+                            disabled={resetDisabled}
+                            title={resetDisabled ? "Already reset" : "Reset timer"}
                         >
                             Reset
                         </PillButton>
