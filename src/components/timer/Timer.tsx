@@ -4,7 +4,7 @@ import PillButton from "@/components/ui/PillButton";
 import type { Phase } from "@/ui/types";
 import { cx } from "@/ui/cx";
 import { useChime } from "@/hooks/useChime";
-import { TABS, LABELS, DURATIONS } from "@/config/timer";
+import { TABS, LABELS } from "@/config/timer";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
 import { formatTime } from "@/lib/time";
 
@@ -15,19 +15,12 @@ const GAP = 8;     // matches gap-2
 export default function Timer() {
     // use the timer engine, and chime only when a study session completes
     const { play: playChime, prime: primeAudio } = useChime("/sounds/windchimes.mp3", 0.28);
+    // AFTER
     const {
-        tab,
-        secondsLeft,
-        isRunning,
-        start,
-        pause,
-        reset,
-        switchTab,
-    } = usePomodoroTimer({
-        onComplete: (prevTab) => {
-            if (prevTab === "study") playChime();
-        },
-    });
+        tab, secondsLeft, isRunning,
+        start, pause, reset, switchTab, setSeconds,
+        atFull, isDone, phaseKind, statusText: statusGeneric,
+    } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
 
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -42,17 +35,45 @@ export default function Timer() {
     const startBtnRef = useRef<HTMLButtonElement | null>(null);
     const resetBtnRef = useRef<HTMLButtonElement | null>(null);
 
-    const isDone = secondsLeft === 0;
-    const statusText = isDone
-        ? "Finished"
-        : isRunning
-            ? LABELS[tab]
-            : `${LABELS[tab]} — Paused`;
+    // map neutral phaseKind ("study" | "break") to your UI Phase ("focus" | "break")
+    const phaseForAccent: Phase = phaseKind === "study" ? "focus" : "break";
 
-    // derive disabled states once per render (used in arrow-skip logic)
-    const startDisabled = secondsLeft === 0 && !isRunning;
-    const atFull = secondsLeft === DURATIONS[tab];
+    // keep your original chip copy (includes the label), or use the hook’s generic text
+    const chipText = statusGeneric;
+
+    // disabled states now use the hook flags
+    const startDisabled = isDone && !isRunning;
     const resetDisabled = atFull;
+
+    const cardMax = menuOpen ? "max-w-xl" : "max-w-lg";
+
+    const chipAccent =
+        isDone
+            ? "text-white/80 ring-white/20"
+            : phaseForAccent === "focus"
+                ? "text-emerald-200 ring-emerald-400/40"
+                : "text-sky-200 ring-sky-400/40";
+
+    const [editing, setEditing] = useState(false);
+    const [input, setInput] = useState("");
+
+    function parseMMSS(s: string): number | null {
+        const m = s.trim();
+        const mmss = /^(\d{1,3}):([0-5]?\d)$/.exec(m);
+        if (!mmss) return null;
+        const mins = parseInt(mmss[1], 10);
+        const secs = parseInt(mmss[2], 10);
+        return mins * 60 + secs;
+    }
+
+    function commitEdit() {
+        const next = parseMMSS(input);
+        if (next != null) {
+            pause();
+            setSeconds(next);
+        }
+        setEditing(false);
+    }
 
     // tablist keyboard nav (Up/Down inside tabs; handoff at edges)
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -171,16 +192,6 @@ export default function Timer() {
             }
         });
     }
-
-    const phaseForAccent: Phase = tab === "study" ? "focus" : "break";
-    const cardMax = menuOpen ? "max-w-xl" : "max-w-lg";
-
-    const chipAccent =
-        isDone
-            ? "text-white/80 ring-white/20"
-            : phaseForAccent === "focus"
-                ? "text-emerald-200 ring-emerald-400/40"
-                : "text-sky-200 ring-sky-400/40";
 
     return (
         <div
@@ -301,11 +312,37 @@ export default function Timer() {
                                 chipAccent
                             )}
                         >
-                            {statusText}
+                            {chipText}
                         </div>
 
                         <div className="text-8xl font-bold tabular-nums leading-none">
-                            {formatTime(secondsLeft)}
+                            {!editing ? (
+                                <button
+                                    type="button"
+                                    onClick={() => { setInput(formatTime(secondsLeft)); setEditing(true); }}
+                                    className="inline-block min-w-[6ch] text-center align-middle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 rounded"
+                                    title="Click to edit time (MM:SS)"
+                                >
+                                    {formatTime(secondsLeft)}
+                                </button>
+                            ) : (
+                                <input
+                                    autoFocus
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onFocus={(e) => e.currentTarget.select()}
+                                    onBlur={commitEdit}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") commitEdit();
+                                        else if (e.key === "Escape") setEditing(false);
+                                    }}
+                                    // Keep width stable to "MM:SS"
+                                    className="inline-block w-[6ch] text-center bg-transparent border-b border-white/20 focus:border-white/40 outline-none caret-white align-middle"
+                                    inputMode="numeric"
+                                    aria-label="Edit timer in MM:SS"
+                                    placeholder="MM:SS"
+                                />
+                            )}
                         </div>
                     </div>
 
