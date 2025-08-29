@@ -8,6 +8,7 @@ import { TABS } from "@/config/timer";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
 import { formatTime } from "@/lib/time";
 import SidebarTabs from "@/components/timer/SidebarTabs";
+import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 
 export default function Timer() {
     // use the timer engine, and chime only when a study session completes
@@ -18,6 +19,11 @@ export default function Timer() {
         start, pause, reset, switchTab, setSeconds,
         atFull, isDone, phaseKind, statusText: statusGeneric,
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
+
+    usePersistence({ tab, secondsLeft, isRunning, switchTab, setSeconds, start, pause }, PERSIST_KEY, {
+        // saveThrottleMs: 1000,
+        // clampSeconds: (tab, secs) => Math.max(0, Math.min(DURATIONS[tab], secs)),
+    });
 
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -106,7 +112,6 @@ export default function Timer() {
         setSeconds(total); // from hook (clamps & pauses)
         setEditing(false);
     }
-
 
     // tablist keyboard nav (Up/Down inside tabs; handoff at edges)
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {

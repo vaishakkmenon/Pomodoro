@@ -1,4 +1,5 @@
-import { defineConfig } from "vite";
+// vite.config.ts
+import { defineConfig } from "vitest/config"; // <- use vitest/config, not vite
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 import { fileURLToPath } from "node:url";
@@ -9,5 +10,11 @@ const __dirname = dirname(__filename);
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
-  resolve: { alias: { "@": resolve(__dirname, "src") } }
+  resolve: { alias: { "@": resolve(__dirname, "src") } },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["src/test/setup.ts"],
+    restoreMocks: true,
+    clearMocks: true,
+  }
 });

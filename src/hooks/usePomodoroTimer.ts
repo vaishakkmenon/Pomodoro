@@ -1,6 +1,6 @@
-// src/hooks/usePomodoroTimer.ts
 import { useEffect, useRef, useState } from "react";
-import { DURATIONS, LONG_EVERY, type Tab } from "../config/timer";
+import { DURATIONS, LONG_EVERY, type Tab, TABS } from "@/config/timer";
+import { PERSIST_KEY } from "@/hooks/usePersistence"; // <-- share the same key
 
 export type PhaseKind = "study" | "break";
 
@@ -10,74 +10,95 @@ type Options = {
     onComplete?: (prevTab: Tab) => void;
 };
 
+type Saved = { tab: Tab; seconds: number; running: boolean };
+
+function readSaved(): Saved | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = localStorage.getItem(PERSIST_KEY);
+        if (!raw) return null;
+        const s = JSON.parse(raw);
+        if (!s || typeof s !== "object") return null;
+        if (typeof s.tab !== "string" || typeof s.seconds !== "number" || typeof s.running !== "boolean") return null;
+        if (!TABS.includes(s.tab as Tab)) return null;
+        return s as Saved;
+    } catch {
+        return null;
+    }
+}
+
 export function usePomodoroTimer(opts: Options = {}) {
     const durations = opts.durations ?? DURATIONS;
     const longEvery = opts.longEvery ?? LONG_EVERY;
     const { onComplete } = opts;
 
-    const [tab, setTab] = useState<Tab>("study");
-    const [secondsLeft, setSecondsLeft] = useState(durations[tab]);
-    const [isRunning, setIsRunning] = useState(false);
+    // ---- NEW: synchronous hydration ----
+    const saved = readSaved();
+    const initialTab: Tab = (saved?.tab as Tab) ?? "study";
+    const initialSeconds = saved?.seconds ?? durations[initialTab];
+    const initialRunning = !!saved?.running;
+
+    const [tab, setTab] = useState<Tab>(initialTab);
+    const [secondsLeft, setSecondsLeft] = useState<number>(initialSeconds);
+    const [isRunning, setIsRunning] = useState<boolean>(initialRunning);
 
     const completedStudies = useRef(0);
     const tickRef = useRef<number | null>(null);
 
-    // replace switchTab with this version:
-    const switchTab = (t: Tab) => {
-        if (tickRef.current) {
-        clearInterval(tickRef.current);
-        tickRef.current = null;
-        }
-        setIsRunning(false);
-        setTab(t);
-        setSecondsLeft(durations[t]);
-    };
-
-    // keep seconds in sync if tab changes or durations change
+    // ticking loop (unchanged)
     useEffect(() => {
-        setSecondsLeft(durations[tab]);
-    }, [tab, durations]);
-
-    useEffect(() => {
-        // always clear any prior interval when (re)running effect
-        if (tickRef.current) {
-        clearInterval(tickRef.current);
-        tickRef.current = null;
-        }
-
-        if (!isRunning) return;
-
-        tickRef.current = window.setInterval(() => {
-        setSecondsLeft((s) => {
-            if (s > 1) return s - 1;
-
-            // handle rollover
-            const prevTab = tab;
-            if (prevTab === "study") {
-            completedStudies.current += 1;
-            const isLong = completedStudies.current % longEvery === 0;
-            setTab(isLong ? "long" : "short");
-            } else {
-            setTab("study");
-            }
-            onComplete?.(prevTab);
-            return 0;
-        });
-        }, 1000) as unknown as number;
-
-        return () => {
         if (tickRef.current) {
             clearInterval(tickRef.current);
             tickRef.current = null;
         }
+        if (!isRunning) return;
+
+        tickRef.current = window.setInterval(() => {
+            setSecondsLeft((s) => {
+                if (s > 1) return s - 1;
+
+                // rollover
+                const prevTab = tab;
+                if (prevTab === "study") {
+                    completedStudies.current += 1;
+                    const isLong = completedStudies.current % longEvery === 0;
+                    const next: Tab = isLong ? "long" : "short";
+                    setTab(next);
+                    setSecondsLeft(durations[next]);
+                } else {
+                    setTab("study");
+                    setSecondsLeft(durations["study"]);
+                }
+                onComplete?.(prevTab);
+                return 0;
+            });
+        }, 1000) as unknown as number;
+
+        return () => {
+            if (tickRef.current) {
+                clearInterval(tickRef.current);
+                tickRef.current = null;
+            }
         };
-    }, [isRunning, tab, longEvery, onComplete]);
+    }, [isRunning, tab, longEvery, onComplete, durations]);
 
     const start = () => setIsRunning(true);
     const pause = () => setIsRunning(false);
+
     const reset = () => {
         setIsRunning(false);
         setSecondsLeft(durations[tab]);
+    };
+
+    // stop immediately, set tab + seconds explicitly
+    const switchTab = (t: Tab) => {
+        if (tickRef.current) {
+            clearInterval(tickRef.current);
+            tickRef.current = null;
+        }
+        setIsRunning(false);
+        setTab(t);
+        setSecondsLeft(durations[t]);
     };
 
     const setSeconds = (n: number) => {
@@ -86,7 +107,7 @@ export function usePomodoroTimer(opts: Options = {}) {
         setSecondsLeft(clamped);
     };
 
-    // neutral derivations (UI-agnostic)
+    // neutral derivations
     const atFull = secondsLeft === durations[tab];
     const isDone = secondsLeft === 0;
     const phaseKind: PhaseKind = tab === "study" ? "study" : "break";
@@ -101,7 +122,6 @@ export function usePomodoroTimer(opts: Options = {}) {
         reset,
         switchTab,
         setSeconds,
-        // neutral helpers for UI
         atFull,
         isDone,
         phaseKind,
