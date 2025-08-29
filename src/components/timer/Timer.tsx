@@ -1,13 +1,12 @@
 // src/components/timer/Timer.tsx
 import { useEffect, useRef, useState } from "react";
-import PillButton from "../ui/PillButton";
-import type { Phase } from "../../ui/types";
-import { cx } from "../../ui/cx";
-import { useChime } from "../../hooks/useChime";
-
-import { TABS, LABELS, DURATIONS } from "../../config/timer";
-import { formatTime } from "../../lib/time";
-import { usePomodoroTimer } from "../../hooks/usePomodoroTimer";
+import PillButton from "@/components/ui/PillButton";
+import type { Phase } from "@/ui/types";
+import { cx } from "@/ui/cx";
+import { useChime } from "@/hooks/useChime";
+import { TABS, LABELS, DURATIONS } from "@/config/timer";
+import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
+import { formatTime } from "@/lib/time";
 
 // Presentation-only (keep local)
 const ITEM_H = 40; // matches h-10
