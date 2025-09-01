@@ -12,7 +12,7 @@ import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 
 export default function Timer() {
     // chime only when a study session completes
-    const { play: playChime, prime: primeAudio } = useChime("/sounds/windchimes.mp3", 0.28);
+    const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", 1.0);
 
     const {
         tab, secondsLeft, isRunning,
