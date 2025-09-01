@@ -11,13 +11,14 @@ import SidebarTabs from "@/components/timer/SidebarTabs";
 import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 
 export default function Timer() {
-    // use the timer engine, and chime only when a study session completes
+    // chime only when a study session completes
     const { play: playChime, prime: primeAudio } = useChime("/sounds/windchimes.mp3", 0.28);
-    // AFTER
+
     const {
         tab, secondsLeft, isRunning,
         start, pause, reset, switchTab, setSeconds,
         atFull, isDone, phaseKind, statusText: statusGeneric,
+        applyCatchup, // <-- NEW: use catch-up from the hook
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
 
     usePersistence({ tab, secondsLeft, isRunning, switchTab, setSeconds, start, pause }, PERSIST_KEY, {
@@ -26,6 +27,25 @@ export default function Timer() {
     });
 
     const [menuOpen, setMenuOpen] = useState(false);
+
+    // ----- Catch-up prompt (paused on load; starts after Apply) -----
+    const [catchupSec, setCatchupSec] = useState<number | null>(null);
+    const MIN_ELAPSED = 10;        // show if away ≥ 10s
+    const MAX_ELAPSED = 10 * 60;   // and ≤ 10 minutes
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(PERSIST_KEY);
+            if (!raw) return;
+            const s = JSON.parse(raw) as { running?: boolean; savedAt?: number };
+            if (!s?.running || !s?.savedAt) return;
+            const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
+            if (elapsed >= MIN_ELAPSED && elapsed <= MAX_ELAPSED) {
+                setCatchupSec(elapsed);
+            }
+        } catch { /* ignore */ }
+    }, []);
+    // ---------------------------------------------------------------
 
     // tab focus management (unchanged)
     const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -41,10 +61,10 @@ export default function Timer() {
     // map neutral phaseKind ("study" | "break") to your UI Phase ("focus" | "break")
     const phaseForAccent: Phase = phaseKind === "study" ? "focus" : "break";
 
-    // keep your original chip copy (includes the label), or use the hook’s generic text
+    // keep your original chip copy
     const chipText = statusGeneric;
 
-    // disabled states now use the hook flags
+    // disabled states
     const startDisabled = isDone && !isRunning;
     const resetDisabled = atFull;
 
@@ -67,14 +87,10 @@ export default function Timer() {
         const cleaned = s.replace(/[^\d:]/g, "");
         const first = cleaned.indexOf(":");
         if (first === -1) return cleaned;
-        // keep only the first colon
         return cleaned.slice(0, first + 1) + cleaned.slice(first + 1).replace(/:/g, "");
     }
 
-    // Flexible parser:
-    // - "MM:SS"  (SS 00–59)
-    // - digits-only length <= 2 => minutes
-    // - digits-only length >= 3 => (all but last 2) minutes + (last 2) seconds
+    // Flexible parser: "MM:SS" or digits (e.g. 2530 -> 25:30, 30 -> 30:00)
     function parseFlexibleTime(raw: string): number | null {
         const s = raw.trim();
         if (!s) return null;
@@ -89,12 +105,7 @@ export default function Timer() {
         }
 
         if (!/^\d+$/.test(s)) return null;
-        if (s.length <= 2) {
-            // treat as minutes
-            const mins = parseInt(s, 10);
-            return mins * 60;
-        }
-        // length >= 3 → last two digits are seconds
+        if (s.length <= 2) return parseInt(s, 10) * 60;
         const secs = parseInt(s.slice(-2), 10);
         if (secs >= 60) return null;
         const mins = parseInt(s.slice(0, -2) || "0", 10);
@@ -105,17 +116,17 @@ export default function Timer() {
         const total = parseFlexibleTime(input);
         if (total == null) {
             setInputError(true);
-            return; // keep editing until valid
+            return;
         }
         setInputError(false);
-        pause();       // from hook
-        setSeconds(total); // from hook (clamps & pauses)
+        pause();
+        setSeconds(total);
         setEditing(false);
     }
 
-    // tablist keyboard nav (Up/Down inside tabs; handoff at edges)
+    // tablist keyboard nav (unchanged)
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-        if (!menuOpen) return; // no tabs when closed
+        if (!menuOpen) return;
         const target = e.target as HTMLElement;
         if (target.getAttribute("role") !== "tab") return;
 
@@ -125,7 +136,6 @@ export default function Timer() {
         switch (e.key) {
             case "ArrowDown":
                 if (focusIdx === last) {
-                    // Long → Start → Reset → Study (skip disabled)
                     if (!startDisabled) startBtnRef.current?.focus();
                     else if (!resetDisabled) resetBtnRef.current?.focus();
                     else {
@@ -138,10 +148,8 @@ export default function Timer() {
                 next = focusIdx + 1;
                 e.preventDefault();
                 break;
-
             case "ArrowUp":
                 if (focusIdx === 0) {
-                    // Study → Reset → Start → Long (skip disabled)
                     if (!resetDisabled) resetBtnRef.current?.focus();
                     else if (!startDisabled) startBtnRef.current?.focus();
                     else {
@@ -154,7 +162,6 @@ export default function Timer() {
                 next = focusIdx - 1;
                 e.preventDefault();
                 break;
-
             case "Home":
                 next = 0;
                 e.preventDefault();
@@ -164,21 +171,20 @@ export default function Timer() {
                 e.preventDefault();
                 break;
             default:
-                return; // don't swallow Enter/Space/Tab
+                return;
         }
 
         setFocusIdx(next);
         tabRefs.current[next]?.focus();
     }
 
-    // panel keyboard nav (Start/Reset ↔ tabs when open; bounce between buttons when closed)
+    // panel keyboard nav (unchanged)
     function onPanelKeyDown(e: React.KeyboardEvent<HTMLElement>) {
         const t = e.target as HTMLElement;
         const last = TABS.length - 1;
 
         if (e.key === "ArrowDown") {
             if (t === startBtnRef.current) {
-                // Start → Reset (or Study if Reset disabled)
                 if (!resetDisabled) resetBtnRef.current?.focus();
                 else if (menuOpen) {
                     setFocusIdx(0);
@@ -186,7 +192,6 @@ export default function Timer() {
                 }
                 e.preventDefault();
             } else if (t === resetBtnRef.current) {
-                // Reset → Study (if menu open), otherwise do nothing
                 if (menuOpen) {
                     setFocusIdx(0);
                     tabRefs.current[0]?.focus();
@@ -195,7 +200,6 @@ export default function Timer() {
             }
         } else if (e.key === "ArrowUp") {
             if (t === resetBtnRef.current) {
-                // Reset → Start (or Long if Start disabled)
                 if (!startDisabled) startBtnRef.current?.focus();
                 else if (menuOpen) {
                     setFocusIdx(last);
@@ -203,7 +207,6 @@ export default function Timer() {
                 }
                 e.preventDefault();
             } else if (t === startBtnRef.current) {
-                // Start → Long (if menu open)
                 if (menuOpen) {
                     setFocusIdx(last);
                     tabRefs.current[last]?.focus();
@@ -213,7 +216,7 @@ export default function Timer() {
         }
     }
 
-    // toggling menu: keep your same focus behavior
+    // toggling menu (unchanged)
     function toggleMenu() {
         const next = !menuOpen;
         setMenuOpen(next);
@@ -239,7 +242,7 @@ export default function Timer() {
                 cardMax
             )}
         >
-            {/* Header with hamburger + inline status (unchanged visuals) */}
+            {/* Header with hamburger + inline status */}
             <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button
@@ -272,7 +275,7 @@ export default function Timer() {
                     tabRefs={tabRefs}
                 />
 
-                {/* Timer panel (unchanged visuals) */}
+                {/* Timer panel */}
                 <section
                     id="panel-session"
                     role="tabpanel"
@@ -313,7 +316,6 @@ export default function Timer() {
                                     onChange={(e) => {
                                         const v = sanitizeTimeInput(e.target.value);
                                         setInput(v);
-                                        // live-validate to clear the red state as soon as it's valid
                                         setInputError(parseFlexibleTime(v) == null);
                                     }}
                                     onFocus={(e) => e.currentTarget.select()}
@@ -364,7 +366,45 @@ export default function Timer() {
                         </PillButton>
                     </div>
                 </section>
-            </div >
-        </div >
+            </div>
+
+            {/* Catch-up toast */}
+            {catchupSec != null && (
+                <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
+                    <div className="rounded-xl border border-white/15 bg-zinc-900/90 px-4 py-3 shadow-lg backdrop-blur">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-white">
+                                You were away for <span className="font-semibold">{formatTime(catchupSec)}</span>. Apply catch-up?
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    className="rounded-md bg-emerald-600/90 px-3 py-1.5 text-sm text-white hover:bg-emerald-600"
+                                    onClick={() => {
+                                        try {
+                                            const raw = localStorage.getItem(PERSIST_KEY);
+                                            const s = raw ? (JSON.parse(raw) as { savedAt?: number }) : {};
+                                            const nowElapsed =
+                                                s?.savedAt ? Math.floor((Date.now() - s.savedAt) / 1000) : catchupSec;
+                                            applyCatchup(nowElapsed ?? catchupSec); // starts running after apply
+                                        } catch {
+                                            applyCatchup(catchupSec);
+                                        }
+                                        setCatchupSec(null);
+                                    }}
+                                >
+                                    Apply
+                                </button>
+                                <button
+                                    className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700"
+                                    onClick={() => setCatchupSec(null)}
+                                >
+                                    Keep time
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
