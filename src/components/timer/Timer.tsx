@@ -4,7 +4,7 @@ import PillButton from "@/components/ui/PillButton";
 import type { Phase } from "@/ui/types";
 import { cx } from "@/ui/cx";
 import { useChime } from "@/hooks/useChime";
-import { TABS } from "@/config/timer";
+import { TABS, LABELS } from "@/config/timer";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
 import { formatTime } from "@/lib/time";
 import SidebarTabs from "@/components/timer/SidebarTabs";
@@ -17,7 +17,7 @@ export default function Timer() {
     const {
         tab, secondsLeft, isRunning,
         start, pause, reset, switchTab, setSeconds,
-        atFull, isDone, phaseKind, statusText: statusGeneric,
+        atFull, isDone, phaseKind,
         applyCatchup, // <-- NEW: use catch-up from the hook
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
 
@@ -62,7 +62,7 @@ export default function Timer() {
     const phaseForAccent: Phase = phaseKind === "study" ? "focus" : "break";
 
     // keep your original chip copy
-    const chipText = statusGeneric;
+    const chipText = `${LABELS[tab]}${isDone ? " — Finished" : isRunning ? "" : " — Paused"}`;
 
     // disabled states
     const startDisabled = isDone && !isRunning;
