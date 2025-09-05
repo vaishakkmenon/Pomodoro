@@ -9,6 +9,7 @@ import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
 import { formatTime } from "@/lib/time";
 import SidebarTabs from "@/components/timer/SidebarTabs";
 import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
+// import type { Task } from "@/components/tasks/TaskTypes";
 
 export default function Timer() {
     // chime only when a study session completes
