@@ -32,6 +32,24 @@ export function usePersistence(
     const hydratedRef = useRef(false);
     const [hydrated, setHydrated] = useState(false);
 
+    // Store current values in a ref to avoid re-attaching listeners on every tick
+    const stateRef = useRef({
+        tab: api.tab,
+        secondsLeft: api.secondsLeft,
+        isRunning: api.isRunning,
+        completedStudies: api.completedStudies,
+    });
+
+    // Keep ref in sync with current values
+    useEffect(() => {
+        stateRef.current = {
+            tab: api.tab,
+            secondsLeft: api.secondsLeft,
+            isRunning: api.isRunning,
+            completedStudies: api.completedStudies,
+        };
+    }, [api.tab, api.secondsLeft, api.isRunning, api.completedStudies]);
+
     // We ONLY mark hydrated here now. Actual restore happens inside usePomodoroTimer.
     useEffect(() => {
         if (hydratedRef.current) return;
@@ -56,38 +74,41 @@ export function usePersistence(
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Save on normal state changes (optional throttle)
+    // Save on normal state changes (with optional throttle using latest values)
     useEffect(() => {
         if (!hydrated || typeof window === "undefined") return;
 
-        const saved: TimerSavedState = {
-            tab: api.tab,
-            seconds: opts.clampSeconds ? opts.clampSeconds(api.tab, api.secondsLeft) : api.secondsLeft,
-            running: api.isRunning,
-            completedStudies: api.completedStudies,
-            savedAt: Date.now(),
+        const doSave = () => {
+            const { tab, secondsLeft, isRunning, completedStudies } = stateRef.current;
+            const saved: TimerSavedState = {
+                tab,
+                seconds: opts.clampSeconds ? opts.clampSeconds(tab, secondsLeft) : secondsLeft,
+                running: isRunning,
+                completedStudies,
+                savedAt: Date.now(),
+            };
+            try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
         };
 
         if (opts.saveThrottleMs && opts.saveThrottleMs > 0) {
-            const id = window.setTimeout(() => {
-                try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
-            }, opts.saveThrottleMs);
+            const id = window.setTimeout(doSave, opts.saveThrottleMs);
             return () => clearTimeout(id);
         } else {
-            try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
+            doSave();
         }
-    }, [hydrated, api.tab, api.secondsLeft, api.isRunning, storageKey, opts.saveThrottleMs, opts.clampSeconds]);
+    }, [hydrated, api.tab, api.secondsLeft, api.isRunning, api.completedStudies, storageKey, opts.saveThrottleMs, opts.clampSeconds]);
 
-    // Always capture a final, up-to-date snapshot on page hide/unload
+    // Attach page hide/unload listeners ONCE (they read from ref for latest values)
     useEffect(() => {
         if (!hydrated || typeof window === "undefined") return;
 
         const saveNow = () => {
+            const { tab, secondsLeft, isRunning, completedStudies } = stateRef.current;
             const saved: TimerSavedState = {
-                tab: api.tab,
-                seconds: opts.clampSeconds ? opts.clampSeconds(api.tab, api.secondsLeft) : api.secondsLeft,
-                running: api.isRunning,
-                completedStudies: api.completedStudies,
+                tab,
+                seconds: opts.clampSeconds ? opts.clampSeconds(tab, secondsLeft) : secondsLeft,
+                running: isRunning,
+                completedStudies,
                 savedAt: Date.now(),
             };
             try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
@@ -104,10 +125,10 @@ export function usePersistence(
         return () => {
             window.removeEventListener("pagehide", onPageHide);
             document.removeEventListener("visibilitychange", onVisibility);
-            window.removeEventListener("beforeunload", onBeforeUnload); // fixed name
+            window.removeEventListener("beforeunload", onBeforeUnload);
         };
-        // Depend on the *current* values so the handler closure is always fresh
-    }, [hydrated, storageKey, api.tab, api.secondsLeft, api.isRunning, opts.clampSeconds]);
+        // Only depend on hydrated and storageKey - listeners read from stateRef
+    }, [hydrated, storageKey, opts.clampSeconds]);
 
     return { hydrated };
 }

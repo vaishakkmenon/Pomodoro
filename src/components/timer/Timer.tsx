@@ -1,17 +1,18 @@
 // src/components/timer/Timer.tsx
 import { useEffect, useRef, useState } from "react";
-import PillButton from "@/components/ui/PillButton";
 import type { Phase } from "@/ui/types";
 import { cx } from "@/ui/cx";
 import { useChime } from "@/hooks/useChime";
 import { TABS, LABELS, CATCHUP_MIN_SECONDS, CATCHUP_MAX_SECONDS } from "@/config/timer";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
-import { formatTime, parseFlexibleTime, sanitizeTimeInput } from "@/lib/time";
 import SidebarTabs from "@/components/timer/SidebarTabs";
+import TimeDisplay from "@/components/timer/TimeDisplay";
+import TimerControls from "@/components/timer/TimerControls";
+import CatchupToast from "@/components/timer/CatchupToast";
 import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 
 export default function Timer() {
-    // chime only when a study session completes
+    // Chime only when a study session completes
     const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", 1.0);
 
     const {
@@ -21,16 +22,15 @@ export default function Timer() {
         applyCatchup,
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
 
-    usePersistence({ tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause }, PERSIST_KEY, {
-        // saveThrottleMs: 1000,
-        // clampSeconds: (tab, secs) => Math.max(0, Math.min(DURATIONS[tab], secs)),
-    });
+    usePersistence(
+        { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause },
+        PERSIST_KEY
+    );
 
     const [menuOpen, setMenuOpen] = useState(false);
 
-    // ----- Catch-up prompt (paused on load; starts after Apply) -----
+    // ----- Catch-up prompt -----
     const [catchupSec, setCatchupSec] = useState<number | null>(null);
-    // Store savedAt when toast is shown to avoid race condition with persistence updates
     const catchupSavedAtRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -41,62 +41,51 @@ export default function Timer() {
             if (!s?.running || !s?.savedAt) return;
             const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
             if (elapsed >= CATCHUP_MIN_SECONDS && elapsed <= CATCHUP_MAX_SECONDS) {
-                catchupSavedAtRef.current = s.savedAt; // Capture for later use
+                catchupSavedAtRef.current = s.savedAt;
                 setCatchupSec(elapsed);
             }
         } catch { /* ignore */ }
     }, []);
-    // ---------------------------------------------------------------
 
-    // tab focus management (unchanged)
+    const handleApplyCatchup = () => {
+        const savedAt = catchupSavedAtRef.current;
+        const elapsed = savedAt
+            ? Math.floor((Date.now() - savedAt) / 1000)
+            : catchupSec;
+        applyCatchup(elapsed ?? catchupSec ?? 0);
+        catchupSavedAtRef.current = null;
+        setCatchupSec(null);
+    };
+
+    const handleDismissCatchup = () => {
+        catchupSavedAtRef.current = null;
+        setCatchupSec(null);
+    };
+
+    // ----- Tab focus management -----
     const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
     const [focusIdx, setFocusIdx] = useState(() => TABS.indexOf(tab));
     useEffect(() => {
         setFocusIdx(TABS.indexOf(tab));
     }, [tab]);
 
-    // focusable controls on the panel
     const startBtnRef = useRef<HTMLButtonElement | null>(null);
     const resetBtnRef = useRef<HTMLButtonElement | null>(null);
 
-    // map neutral phaseKind ("study" | "break") to your UI Phase ("focus" | "break")
+    // ----- Derived values -----
     const phaseForAccent: Phase = phaseKind === "study" ? "focus" : "break";
-
-    // keep your original chip copy
     const chipText = `${LABELS[tab]}${isDone ? " — Finished" : isRunning ? "" : " — Paused"}`;
-
-    // disabled states
     const startDisabled = isDone && !isRunning;
     const resetDisabled = atFull;
-
     const cardMax = menuOpen ? "max-w-xl" : "max-w-lg";
 
-    const chipAccent =
-        isDone
-            ? "text-white/80 ring-white/20"
-            : phaseForAccent === "focus"
-                ? "text-emerald-200 ring-emerald-400/40"
-                : "text-sky-200 ring-sky-400/40";
+    const chipAccent = isDone
+        ? "text-white/80 ring-white/20"
+        : phaseForAccent === "focus"
+            ? "text-emerald-200 ring-emerald-400/40"
+            : "text-sky-200 ring-sky-400/40";
 
-    // Editing state
-    const [editing, setEditing] = useState(false);
-    const [input, setInput] = useState("");
-    const [inputError, setInputError] = useState(false);
-
-
-    function commitEdit() {
-        const total = parseFlexibleTime(input);
-        if (total == null) {
-            setInputError(true);
-            return;
-        }
-        setInputError(false);
-        pause();
-        setSeconds(total);
-        setEditing(false);
-    }
-
-    // tablist keyboard nav (unchanged)
+    // ----- Keyboard navigation -----
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
         if (!menuOpen) return;
         const target = e.target as HTMLElement;
@@ -110,10 +99,7 @@ export default function Timer() {
                 if (focusIdx === last) {
                     if (!startDisabled) startBtnRef.current?.focus();
                     else if (!resetDisabled) resetBtnRef.current?.focus();
-                    else {
-                        setFocusIdx(0);
-                        tabRefs.current[0]?.focus();
-                    }
+                    else { setFocusIdx(0); tabRefs.current[0]?.focus(); }
                     e.preventDefault();
                     return;
                 }
@@ -124,10 +110,7 @@ export default function Timer() {
                 if (focusIdx === 0) {
                     if (!resetDisabled) resetBtnRef.current?.focus();
                     else if (!startDisabled) startBtnRef.current?.focus();
-                    else {
-                        setFocusIdx(last);
-                        tabRefs.current[last]?.focus();
-                    }
+                    else { setFocusIdx(last); tabRefs.current[last]?.focus(); }
                     e.preventDefault();
                     return;
                 }
@@ -150,7 +133,6 @@ export default function Timer() {
         tabRefs.current[next]?.focus();
     }
 
-    // panel keyboard nav (unchanged)
     function onPanelKeyDown(e: React.KeyboardEvent<HTMLElement>) {
         const t = e.target as HTMLElement;
         const last = TABS.length - 1;
@@ -158,37 +140,26 @@ export default function Timer() {
         if (e.key === "ArrowDown") {
             if (t === startBtnRef.current) {
                 if (!resetDisabled) resetBtnRef.current?.focus();
-                else if (menuOpen) {
-                    setFocusIdx(0);
-                    tabRefs.current[0]?.focus();
-                }
+                else if (menuOpen) { setFocusIdx(0); tabRefs.current[0]?.focus(); }
                 e.preventDefault();
-            } else if (t === resetBtnRef.current) {
-                if (menuOpen) {
-                    setFocusIdx(0);
-                    tabRefs.current[0]?.focus();
-                    e.preventDefault();
-                }
+            } else if (t === resetBtnRef.current && menuOpen) {
+                setFocusIdx(0);
+                tabRefs.current[0]?.focus();
+                e.preventDefault();
             }
         } else if (e.key === "ArrowUp") {
             if (t === resetBtnRef.current) {
                 if (!startDisabled) startBtnRef.current?.focus();
-                else if (menuOpen) {
-                    setFocusIdx(last);
-                    tabRefs.current[last]?.focus();
-                }
+                else if (menuOpen) { setFocusIdx(last); tabRefs.current[last]?.focus(); }
                 e.preventDefault();
-            } else if (t === startBtnRef.current) {
-                if (menuOpen) {
-                    setFocusIdx(last);
-                    tabRefs.current[last]?.focus();
-                    e.preventDefault();
-                }
+            } else if (t === startBtnRef.current && menuOpen) {
+                setFocusIdx(last);
+                tabRefs.current[last]?.focus();
+                e.preventDefault();
             }
         }
     }
 
-    // toggling menu (unchanged)
     function toggleMenu() {
         const next = !menuOpen;
         setMenuOpen(next);
@@ -214,7 +185,7 @@ export default function Timer() {
                 cardMax
             )}
         >
-            {/* Header with hamburger + inline status */}
+            {/* Header with hamburger */}
             <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button
@@ -256,6 +227,7 @@ export default function Timer() {
                     onKeyDown={onPanelKeyDown}
                 >
                     <div className="flex flex-col items-center -mt-1 md:-mt-8 gap-4 mb-6">
+                        {/* Status chip */}
                         <div
                             aria-live="polite"
                             className={cx(
@@ -267,113 +239,38 @@ export default function Timer() {
                             {chipText}
                         </div>
 
+                        {/* Time display */}
                         <div className="text-8xl font-bold tabular-nums leading-none">
-                            {!editing ? (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setInput(formatTime(secondsLeft));
-                                        setInputError(false);
-                                        setEditing(true);
-                                    }}
-                                    className="inline-block min-w-[6ch] text-center align-middle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 rounded"
-                                    title="Click to edit time (MM:SS). You can also type 2530 → 25:30 or 30 → 30:00"
-                                >
-                                    {formatTime(secondsLeft)}
-                                </button>
-                            ) : (
-                                <input
-                                    autoFocus
-                                    value={input}
-                                    onChange={(e) => {
-                                        const v = sanitizeTimeInput(e.target.value);
-                                        setInput(v);
-                                        setInputError(parseFlexibleTime(v) == null);
-                                    }}
-                                    onFocus={(e) => e.currentTarget.select()}
-                                    onBlur={commitEdit}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") commitEdit();
-                                        else if (e.key === "Escape") setEditing(false);
-                                    }}
-                                    className={cx(
-                                        "inline-block w-[6ch] text-center bg-transparent border-b outline-none caret-white align-middle",
-                                        inputError ? "border-red-400 focus:border-red-400" : "border-white/20 focus:border-white/40"
-                                    )}
-                                    inputMode="numeric"
-                                    aria-label="Edit timer (MM:SS or digits like 2530)"
-                                    placeholder="MM:SS"
-                                />
-                            )}
+                            <TimeDisplay
+                                secondsLeft={secondsLeft}
+                                onTimeChange={setSeconds}
+                                onPause={pause}
+                            />
                         </div>
                     </div>
 
-                    <div className="flex justify-center gap-3">
-                        <PillButton
-                            ref={startBtnRef}
-                            type="button"
-                            phase={phaseForAccent}
-                            onClick={() => {
-                                primeAudio();
-                                isRunning ? pause() : start();
-                            }}
-                            aria-pressed={isRunning}
-                            className="min-w-28 justify-center !text-lg !px-4 !py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={startDisabled}
-                        >
-                            {isRunning ? "Pause" : "Start"}
-                        </PillButton>
-
-                        <PillButton
-                            ref={resetBtnRef}
-                            type="button"
-                            phase={phaseForAccent}
-                            variant="danger"
-                            onClick={() => reset()}
-                            className="min-w-28 justify-center !text-lg !px-4 !py-2"
-                            disabled={resetDisabled}
-                            title={resetDisabled ? "Already reset" : "Reset timer"}
-                        >
-                            Reset
-                        </PillButton>
-                    </div>
+                    <TimerControls
+                        phase={phaseForAccent}
+                        isRunning={isRunning}
+                        startDisabled={startDisabled}
+                        resetDisabled={resetDisabled}
+                        onStart={start}
+                        onPause={pause}
+                        onReset={reset}
+                        onPrimeAudio={primeAudio}
+                        startBtnRef={startBtnRef}
+                        resetBtnRef={resetBtnRef}
+                    />
                 </section>
             </div>
 
             {/* Catch-up toast */}
             {catchupSec != null && (
-                <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
-                    <div className="rounded-xl border border-white/15 bg-zinc-900/90 px-4 py-3 shadow-lg backdrop-blur">
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm text-white">
-                                You were away for <span className="font-semibold">{formatTime(catchupSec)}</span>. Apply catch-up?
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    className="rounded-md bg-emerald-600/90 px-3 py-1.5 text-sm text-white hover:bg-emerald-600"
-                                    onClick={() => {
-                                        // Use the savedAt captured when toast was shown, not current localStorage
-                                        const savedAt = catchupSavedAtRef.current;
-                                        const elapsed = savedAt
-                                            ? Math.floor((Date.now() - savedAt) / 1000)
-                                            : catchupSec;
-                                        applyCatchup(elapsed ?? catchupSec);
-                                        catchupSavedAtRef.current = null;
-                                        setCatchupSec(null);
-                                    }}
-                                >
-                                    Apply
-                                </button>
-                                <button
-                                    className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700"
-                                    onClick={() => setCatchupSec(null)}
-                                >
-                                    Keep time
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <CatchupToast
+                    elapsedSeconds={catchupSec}
+                    onApply={handleApplyCatchup}
+                    onDismiss={handleDismissCatchup}
+                />
             )}
         </div>
     );
