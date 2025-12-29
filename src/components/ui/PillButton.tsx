@@ -19,4 +19,6 @@ const PillButton = forwardRef<HTMLButtonElement, Props>(
     }
 );
 
+PillButton.displayName = "PillButton";
+
 export default PillButton;

@@ -13,16 +13,23 @@ describe("usePomodoroTimer hydration", () => {
         vi.useRealTimers();
     });
 
-    it("hydrates a running study session and continues ticking", () => {
+    it("hydrates saved state but starts paused (user must resume)", () => {
         localStorage.setItem(PERSIST_KEY, JSON.stringify({ tab: "study", seconds: 1493, running: true }));
 
         const { result } = renderHook(() => usePomodoroTimer());
 
-        // first render uses saved values (no 25:00 flash)
+        // First render uses saved tab and seconds (no 25:00 flash)
         expect(result.current.tab).toBe("study");
         expect(result.current.secondsLeft).toBe(1493);
-        expect(result.current.isRunning).toBe(true);
+        // Always starts paused so user can decide when to resume
+        expect(result.current.isRunning).toBe(false);
 
+        // Timer doesn't tick while paused
+        act(() => vi.advanceTimersByTime(2000));
+        expect(result.current.secondsLeft).toBe(1493);
+
+        // After starting, it ticks normally
+        act(() => result.current.start());
         act(() => vi.advanceTimersByTime(2000));
         expect(result.current.secondsLeft).toBe(1491);
     });

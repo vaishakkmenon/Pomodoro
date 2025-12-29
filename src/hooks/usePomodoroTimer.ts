@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { DURATIONS, LONG_EVERY, type Tab, TABS } from "@/config/timer";
+import { DURATIONS, LONG_EVERY, MAX_TIMER_SECONDS, type Tab, TABS } from "@/config/timer";
 import { PERSIST_KEY } from "@/hooks/usePersistence";
 
 export type PhaseKind = "study" | "break";
@@ -111,7 +111,7 @@ export function usePomodoroTimer(opts: Options = {}) {
 
     const setSeconds = (n: number) => {
         setIsRunning(false);
-        const clamped = Math.max(0, Math.min(24 * 60 * 60, Math.floor(n)));
+        const clamped = Math.max(0, Math.min(MAX_TIMER_SECONDS, Math.floor(n)));
         setSecondsLeft(clamped);
     };
 

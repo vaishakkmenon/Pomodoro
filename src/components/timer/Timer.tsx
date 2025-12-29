@@ -4,9 +4,9 @@ import PillButton from "@/components/ui/PillButton";
 import type { Phase } from "@/ui/types";
 import { cx } from "@/ui/cx";
 import { useChime } from "@/hooks/useChime";
-import { TABS, LABELS } from "@/config/timer";
+import { TABS, LABELS, CATCHUP_MIN_SECONDS, CATCHUP_MAX_SECONDS } from "@/config/timer";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
-import { formatTime } from "@/lib/time";
+import { formatTime, parseFlexibleTime, sanitizeTimeInput } from "@/lib/time";
 import SidebarTabs from "@/components/timer/SidebarTabs";
 import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 
@@ -30,8 +30,7 @@ export default function Timer() {
 
     // ----- Catch-up prompt (paused on load; starts after Apply) -----
     const [catchupSec, setCatchupSec] = useState<number | null>(null);
-    const MIN_ELAPSED = 10;        // show if away ≥ 10s
-    const MAX_ELAPSED = 10 * 60;   // and ≤ 10 minutes
+
 
     useEffect(() => {
         try {
@@ -40,7 +39,7 @@ export default function Timer() {
             const s = JSON.parse(raw) as { running?: boolean; savedAt?: number };
             if (!s?.running || !s?.savedAt) return;
             const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
-            if (elapsed >= MIN_ELAPSED && elapsed <= MAX_ELAPSED) {
+            if (elapsed >= CATCHUP_MIN_SECONDS && elapsed <= CATCHUP_MAX_SECONDS) {
                 setCatchupSec(elapsed);
             }
         } catch { /* ignore */ }
@@ -82,35 +81,6 @@ export default function Timer() {
     const [input, setInput] = useState("");
     const [inputError, setInputError] = useState(false);
 
-    // Allow only digits and a single colon while typing
-    function sanitizeTimeInput(s: string) {
-        const cleaned = s.replace(/[^\d:]/g, "");
-        const first = cleaned.indexOf(":");
-        if (first === -1) return cleaned;
-        return cleaned.slice(0, first + 1) + cleaned.slice(first + 1).replace(/:/g, "");
-    }
-
-    // Flexible parser: "MM:SS" or digits (e.g. 2530 -> 25:30, 30 -> 30:00)
-    function parseFlexibleTime(raw: string): number | null {
-        const s = raw.trim();
-        if (!s) return null;
-
-        if (s.includes(":")) {
-            const [mm, ss] = s.split(":");
-            if (!/^\d{1,3}$/.test(mm || "") || !/^\d{1,2}$/.test(ss || "")) return null;
-            const mins = parseInt(mm, 10);
-            const secs = parseInt(ss, 10);
-            if (secs >= 60) return null;
-            return mins * 60 + secs;
-        }
-
-        if (!/^\d+$/.test(s)) return null;
-        if (s.length <= 2) return parseInt(s, 10) * 60;
-        const secs = parseInt(s.slice(-2), 10);
-        if (secs >= 60) return null;
-        const mins = parseInt(s.slice(0, -2) || "0", 10);
-        return mins * 60 + secs;
-    }
 
     function commitEdit() {
         const total = parseFlexibleTime(input);
