@@ -112,3 +112,36 @@ export function usePersistence(
 
     return { hydrated };
 }
+
+export function useStoredState<T>(key: string, initial: T) {
+    const [value, setValue] = useState<T>(() => {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? (JSON.parse(raw) as T) : initial;
+        } catch {
+            return initial;
+        }
+    });
+
+    // Persist on state changes
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch { }
+    }, [key, value]);
+
+    // Write a final snapshot on pagehide / beforeunload (mirrors your timer behavior)
+    useEffect(() => {
+        const write = () => {
+            try { localStorage.setItem(key, JSON.stringify(value)); } catch { }
+        };
+        window.addEventListener("pagehide", write);
+        window.addEventListener("beforeunload", write);
+        return () => {
+            window.removeEventListener("pagehide", write);
+            window.removeEventListener("beforeunload", write);
+        };
+    }, [key, value]);
+
+    return [value, setValue] as const;
+}
