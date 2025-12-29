@@ -15,13 +15,13 @@ export default function Timer() {
     const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", 1.0);
 
     const {
-        tab, secondsLeft, isRunning,
+        tab, secondsLeft, isRunning, completedStudies,
         start, pause, reset, switchTab, setSeconds,
         atFull, isDone, phaseKind,
-        applyCatchup, // <-- NEW: use catch-up from the hook
+        applyCatchup,
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
 
-    usePersistence({ tab, secondsLeft, isRunning, switchTab, setSeconds, start, pause }, PERSIST_KEY, {
+    usePersistence({ tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause }, PERSIST_KEY, {
         // saveThrottleMs: 1000,
         // clampSeconds: (tab, secs) => Math.max(0, Math.min(DURATIONS[tab], secs)),
     });
@@ -30,7 +30,8 @@ export default function Timer() {
 
     // ----- Catch-up prompt (paused on load; starts after Apply) -----
     const [catchupSec, setCatchupSec] = useState<number | null>(null);
-
+    // Store savedAt when toast is shown to avoid race condition with persistence updates
+    const catchupSavedAtRef = useRef<number | null>(null);
 
     useEffect(() => {
         try {
@@ -40,6 +41,7 @@ export default function Timer() {
             if (!s?.running || !s?.savedAt) return;
             const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
             if (elapsed >= CATCHUP_MIN_SECONDS && elapsed <= CATCHUP_MAX_SECONDS) {
+                catchupSavedAtRef.current = s.savedAt; // Capture for later use
                 setCatchupSec(elapsed);
             }
         } catch { /* ignore */ }
@@ -350,15 +352,13 @@ export default function Timer() {
                                 <button
                                     className="rounded-md bg-emerald-600/90 px-3 py-1.5 text-sm text-white hover:bg-emerald-600"
                                     onClick={() => {
-                                        try {
-                                            const raw = localStorage.getItem(PERSIST_KEY);
-                                            const s = raw ? (JSON.parse(raw) as { savedAt?: number }) : {};
-                                            const nowElapsed =
-                                                s?.savedAt ? Math.floor((Date.now() - s.savedAt) / 1000) : catchupSec;
-                                            applyCatchup(nowElapsed ?? catchupSec); // starts running after apply
-                                        } catch {
-                                            applyCatchup(catchupSec);
-                                        }
+                                        // Use the savedAt captured when toast was shown, not current localStorage
+                                        const savedAt = catchupSavedAtRef.current;
+                                        const elapsed = savedAt
+                                            ? Math.floor((Date.now() - savedAt) / 1000)
+                                            : catchupSec;
+                                        applyCatchup(elapsed ?? catchupSec);
+                                        catchupSavedAtRef.current = null;
                                         setCatchupSec(null);
                                     }}
                                 >

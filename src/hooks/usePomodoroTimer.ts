@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DURATIONS, LONG_EVERY, MAX_TIMER_SECONDS, type Tab, TABS } from "@/config/timer";
 import { PERSIST_KEY } from "@/hooks/usePersistence";
+import { isValidSavedState, type TimerSavedState } from "@/types/timer";
 
 export type PhaseKind = "study" | "break";
 
@@ -10,24 +11,15 @@ type Options = {
     onComplete?: (prevTab: Tab) => void;
 };
 
-type Saved = {
-    tab: Tab;
-    seconds: number;
-    running: boolean;
-    completedStudies?: number;
-    savedAt?: number;
-};
-
-function readSaved(): Saved | null {
+function readSaved(): TimerSavedState | null {
     if (typeof window === "undefined") return null;
     try {
         const raw = localStorage.getItem(PERSIST_KEY);
         if (!raw) return null;
         const s = JSON.parse(raw);
-        if (!s || typeof s !== "object") return null;
-        if (typeof s.tab !== "string" || typeof s.seconds !== "number" || typeof s.running !== "boolean") return null;
+        if (!isValidSavedState(s)) return null;
         if (!TABS.includes(s.tab as Tab)) return null;
-        return s as Saved;
+        return s as TimerSavedState;
     } catch {
         return null;
     }
@@ -151,7 +143,10 @@ export function usePomodoroTimer(opts: Options = {}) {
         completedStudies.current = cs;
         setTab(t);
         setSecondsLeft(rem);
-        setIsRunning(true);
+        // Only start if there's time remaining, otherwise timer would be stuck at 0
+        if (rem > 0) {
+            setIsRunning(true);
+        }
     };
 
     const atFull = secondsLeft === durations[tab];
@@ -163,6 +158,7 @@ export function usePomodoroTimer(opts: Options = {}) {
         tab,
         secondsLeft,
         isRunning,
+        completedStudies: completedStudies.current,
         start,
         pause,
         reset,

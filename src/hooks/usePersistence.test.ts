@@ -8,11 +8,13 @@ function createMockApi(overrides: Partial<{
     tab: Tab;
     secondsLeft: number;
     isRunning: boolean;
+    completedStudies: number;
 }> = {}) {
     return {
         tab: overrides.tab ?? "study" as Tab,
         secondsLeft: overrides.secondsLeft ?? 1500,
         isRunning: overrides.isRunning ?? false,
+        completedStudies: overrides.completedStudies ?? 0,
         switchTab: vi.fn(),
         setSeconds: vi.fn(),
         start: vi.fn(),

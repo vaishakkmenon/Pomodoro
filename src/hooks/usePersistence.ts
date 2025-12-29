@@ -1,21 +1,18 @@
 // src/hooks/usePersistence.ts
 import { useEffect, useRef, useState } from "react";
 import { TABS, type Tab } from "@/config/timer";
+import { isValidSavedState, type TimerSavedState } from "@/types/timer";
 
 export const PERSIST_KEY = "pomodoro:v1";
-export type Saved = { tab: Tab; seconds: number; running: boolean; savedAt?: number };
 
-function isSaved(x: any): x is Saved {
-    return x && typeof x === "object"
-        && typeof x.tab === "string"
-        && typeof x.seconds === "number"
-        && typeof x.running === "boolean";
-}
+// Re-export for convenience
+export type { TimerSavedState };
 
 export type PersistenceApi = {
     tab: Tab;
     secondsLeft: number;
     isRunning: boolean;
+    completedStudies: number;
     switchTab: (t: Tab) => void;
     setSeconds: (n: number) => void;
     start: () => void;
@@ -47,7 +44,7 @@ export function usePersistence(
             const raw = localStorage.getItem(storageKey);
             if (raw) {
                 const parsed = JSON.parse(raw);
-                if (isSaved(parsed) && TABS.includes(parsed.tab as Tab) && opts.clampSeconds) {
+                if (isValidSavedState(parsed) && TABS.includes(parsed.tab as Tab) && opts.clampSeconds) {
                     const clamped = opts.clampSeconds(parsed.tab as Tab, parsed.seconds);
                     if (clamped !== parsed.seconds) {
                         localStorage.setItem(storageKey, JSON.stringify({ ...parsed, seconds: clamped }));
@@ -63,10 +60,11 @@ export function usePersistence(
     useEffect(() => {
         if (!hydrated || typeof window === "undefined") return;
 
-        const saved: Saved = {
+        const saved: TimerSavedState = {
             tab: api.tab,
             seconds: opts.clampSeconds ? opts.clampSeconds(api.tab, api.secondsLeft) : api.secondsLeft,
             running: api.isRunning,
+            completedStudies: api.completedStudies,
             savedAt: Date.now(),
         };
 
@@ -85,10 +83,11 @@ export function usePersistence(
         if (!hydrated || typeof window === "undefined") return;
 
         const saveNow = () => {
-            const saved: Saved = {
+            const saved: TimerSavedState = {
                 tab: api.tab,
                 seconds: opts.clampSeconds ? opts.clampSeconds(api.tab, api.secondsLeft) : api.secondsLeft,
                 running: api.isRunning,
+                completedStudies: api.completedStudies,
                 savedAt: Date.now(),
             };
             try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
