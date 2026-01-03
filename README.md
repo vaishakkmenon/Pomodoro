@@ -101,9 +101,16 @@ npm run test:ui
 
 | Module | Tests |
 |--------|-------|
-| Time utilities | 22 tests |
-| Pomodoro timer hook | 8 tests |
-| Persistence hook | 11 tests |
+| Time utilities (`time.test.ts`) | 22 |
+| Pomodoro timer hook | 8 |
+| Persistence hook | 11 |
+| Stored state hook | 8 |
+| Audio hook | 8 |
+| Chime hook | 5 |
+| PillButton component | 9 |
+| SidebarTabs component | 11 |
+| Timer component | 8 |
+| **Total** | **90** |
 
 ## ⚙️ Configuration
 

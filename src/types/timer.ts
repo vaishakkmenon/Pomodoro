@@ -3,11 +3,14 @@ import type { Tab } from "@/config/timer";
 /**
  * Shape of data persisted to localStorage for timer state.
  * Used by both usePomodoroTimer (read) and usePersistence (write).
+ * 
+ * NOTE: We use `seconds` here (not `secondsLeft`) for backwards compatibility
+ * with existing localStorage data. Hooks use `secondsLeft` for clarity.
  */
 export type TimerSavedState = {
     /** Current timer tab/phase */
     tab: Tab;
-    /** Seconds remaining in current phase */
+    /** Seconds remaining in current phase (stored as `seconds` for backwards compatibility) */
     seconds: number;
     /** Whether timer was running when saved */
     running: boolean;

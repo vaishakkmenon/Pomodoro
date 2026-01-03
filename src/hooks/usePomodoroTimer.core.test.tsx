@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
+import type { Durations } from "@/config/timer";
 
-const tiny = { study: 2, short: 1, long: 1 } as const;
+const tiny: Durations = { study: 2, short: 1, long: 1 };
 
 describe("usePomodoroTimer core", () => {
     beforeEach(() => vi.useFakeTimers());
@@ -11,7 +12,7 @@ describe("usePomodoroTimer core", () => {
     it("ticks and rolls from study -> short", () => {
         const onComplete = vi.fn();
         const { result } = renderHook(() =>
-            usePomodoroTimer({ durations: tiny as any, longEvery: 99, onComplete })
+            usePomodoroTimer({ durations: tiny, longEvery: 99, onComplete })
         );
 
         act(() => result.current.start());
@@ -24,9 +25,9 @@ describe("usePomodoroTimer core", () => {
     });
 
     it("long break every N studies", () => {
-        const tiny = { study: 2, short: 1, long: 1 } as const;
+        const tinyLocal: Durations = { study: 2, short: 1, long: 1 };
         const { result } = renderHook(() =>
-            usePomodoroTimer({ durations: tiny as any, longEvery: 2 })
+            usePomodoroTimer({ durations: tinyLocal, longEvery: 2 })
         );
 
         // Let the effect that installs setInterval run *before* advancing timers
@@ -42,8 +43,9 @@ describe("usePomodoroTimer core", () => {
     });
 
     it("switchTab stops immediately and resets seconds", () => {
+        const durations: Durations = { study: 60, short: 30, long: 15 };
         const { result } = renderHook(() =>
-            usePomodoroTimer({ durations: { study: 60, short: 30, long: 15 } as any })
+            usePomodoroTimer({ durations })
         );
 
         act(() => { result.current.start(); vi.advanceTimersByTime(1000); }); // 59 left
@@ -58,8 +60,9 @@ describe("usePomodoroTimer core", () => {
     });
 
     it("reset stops and restores full duration", () => {
+        const durations: Durations = { study: 60, short: 30, long: 15 };
         const { result } = renderHook(() =>
-            usePomodoroTimer({ durations: { study: 60, short: 30, long: 15 } as any })
+            usePomodoroTimer({ durations })
         );
 
         act(() => { result.current.start(); vi.advanceTimersByTime(2000); }); // 58 left
