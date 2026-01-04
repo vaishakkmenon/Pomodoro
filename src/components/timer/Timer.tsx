@@ -15,6 +15,10 @@ import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 import { safeParseJSON } from "@/lib/json";
 import { isValidCatchupState, type CatchupCheckState } from "@/types/timer";
 
+import { MusicSettings } from "@/components/spotify/MusicSettings";
+import { SpotifyConnect } from "@/components/spotify/SpotifyConnect";
+import { useSpotifySync } from "@/hooks/useSpotifySync";
+
 export default function Timer() {
     // Chime only when a study session completes
     const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", 1.0);
@@ -23,8 +27,15 @@ export default function Timer() {
         tab, secondsLeft, isRunning, completedStudies,
         start, pause, reset, switchTab, setSeconds,
         atFull, isDone, phaseKind,
-        applyCatchup,
+        applyCatchup, setSyncCallback,
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
+
+    // --- Spotify Integration ---
+    const { syncPlayback, isAuthenticated } = useSpotifySync();
+
+    useEffect(() => {
+        setSyncCallback(syncPlayback);
+    }, [setSyncCallback, syncPlayback]);
 
     usePersistence(
         { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause },
@@ -32,6 +43,8 @@ export default function Timer() {
     );
 
     const [menuOpen, setMenuOpen] = useState(false);
+    // Spotify menu toggle
+    const [spotifyOpen, setSpotifyOpen] = useState(false);
 
     // ----- Catch-up prompt -----
     const [catchupSec, setCatchupSec] = useState<number | null>(null);
@@ -179,99 +192,125 @@ export default function Timer() {
     }
 
     return (
-        <div
-            className={cx(
-                "w-full rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur",
-                "transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none",
-                cardMax
-            )}
-        >
-            {/* Header with hamburger */}
-            <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={toggleMenu}
-                        aria-expanded={menuOpen}
-                        aria-controls="sidebar-tabs"
-                        className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
+        <div className="flex flex-col gap-4 items-center w-full">
+            <div
+                className={cx(
+                    "w-full rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur",
+                    "transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none",
+                    cardMax
+                )}
+            >
+                {/* Header with hamburger and Spotify */}
+                <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={toggleMenu}
+                            aria-expanded={menuOpen}
+                            aria-controls="sidebar-tabs"
+                            className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-                        title={menuOpen ? "Hide session tabs" : "Show session tabs"}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <rect x="3" y="6" width="18" height="2" rx="1" />
-                            <rect x="3" y="11" width="18" height="2" rx="1" />
-                            <rect x="3" y="16" width="18" height="2" rx="1" />
-                        </svg>
-                        <span className="sr-only">Toggle session menu</span>
-                    </button>
-                </div>
-            </div>
-
-            <div className={cx("flex transition-[gap] duration-700 ease-in-out", menuOpen ? "gap-6" : "gap-0")}>
-                <SidebarTabs
-                    open={menuOpen}
-                    tab={tab}
-                    focusIdx={focusIdx}
-                    setFocusIdx={setFocusIdx}
-                    switchTab={switchTab}
-                    onTabsKeyDown={onTabsKeyDown}
-                    tabRefs={tabRefs}
-                />
-
-                {/* Timer panel */}
-                <section
-                    id="panel-session"
-                    role="tabpanel"
-                    aria-labelledby={`tab-${tab}`}
-                    className="flex-1"
-                    onKeyDown={onPanelKeyDown}
-                >
-                    <div className="flex flex-col items-center -mt-1 md:-mt-8 gap-4 mb-6">
-                        {/* Status chip */}
-                        <div
-                            aria-live="polite"
-                            className={cx(
-                                "whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase",
-                                "ring-1 transition-colors",
-                                chipAccent
-                            )}
+                            title={menuOpen ? "Hide session tabs" : "Show session tabs"}
                         >
-                            {chipText}
-                        </div>
-
-                        {/* Time display */}
-                        <div className="text-8xl font-bold tabular-nums leading-none">
-                            <TimeDisplay
-                                secondsLeft={secondsLeft}
-                                onTimeChange={setSeconds}
-                                onPause={pause}
-                            />
-                        </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <rect x="3" y="6" width="18" height="2" rx="1" />
+                                <rect x="3" y="11" width="18" height="2" rx="1" />
+                                <rect x="3" y="16" width="18" height="2" rx="1" />
+                            </svg>
+                            <span className="sr-only">Toggle session menu</span>
+                        </button>
                     </div>
+                </div>
 
-                    <TimerControls
-                        phase={phaseForAccent}
-                        isRunning={isRunning}
-                        startDisabled={startDisabled}
-                        resetDisabled={resetDisabled}
-                        onStart={start}
-                        onPause={pause}
-                        onReset={reset}
-                        onPrimeAudio={primeAudio}
-                        startBtnRef={startBtnRef}
-                        resetBtnRef={resetBtnRef}
+                <div className={cx("flex transition-[gap] duration-700 ease-in-out", menuOpen ? "gap-6" : "gap-0")}>
+                    <SidebarTabs
+                        open={menuOpen}
+                        tab={tab}
+                        focusIdx={focusIdx}
+                        setFocusIdx={setFocusIdx}
+                        switchTab={switchTab}
+                        onTabsKeyDown={onTabsKeyDown}
+                        tabRefs={tabRefs}
                     />
-                </section>
+
+                    {/* Timer panel */}
+                    <section
+                        id="panel-session"
+                        role="tabpanel"
+                        aria-labelledby={`tab-${tab}`}
+                        className="flex-1"
+                        onKeyDown={onPanelKeyDown}
+                    >
+                        <div className="flex flex-col items-center -mt-1 md:-mt-8 gap-4 mb-6">
+                            {/* Status chip */}
+                            <div
+                                aria-live="polite"
+                                className={cx(
+                                    "whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase",
+                                    "ring-1 transition-colors",
+                                    chipAccent
+                                )}
+                            >
+                                {chipText}
+                            </div>
+
+                            {/* Time display */}
+                            <div className="text-8xl font-bold tabular-nums leading-none">
+                                <TimeDisplay
+                                    secondsLeft={secondsLeft}
+                                    onTimeChange={setSeconds}
+                                    onPause={pause}
+                                />
+                            </div>
+                        </div>
+
+                        <TimerControls
+                            phase={phaseForAccent}
+                            isRunning={isRunning}
+                            startDisabled={startDisabled}
+                            resetDisabled={resetDisabled}
+                            onStart={start}
+                            onPause={pause}
+                            onReset={reset}
+                            onPrimeAudio={primeAudio}
+                            startBtnRef={startBtnRef}
+                            resetBtnRef={resetBtnRef}
+                        />
+
+                        {/* Spotify Settings Toggle (Only if authenticated) */}
+                        {isAuthenticated && (
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    onClick={() => setSpotifyOpen(!spotifyOpen)}
+                                    className="text-sm text-white/50 hover:text-white transition-colors"
+                                >
+                                    {spotifyOpen ? "Hide Music Settings" : "Show Music Settings"}
+                                </button>
+                            </div>
+                        )}
+                    </section>
+                </div>
+
+                {/* Catch-up toast */}
+                {catchupSec != null && (
+                    <CatchupToast
+                        elapsedSeconds={catchupSec}
+                        onApply={handleApplyCatchup}
+                        onDismiss={handleDismissCatchup}
+                    />
+                )}
             </div>
 
-            {/* Catch-up toast */}
-            {catchupSec != null && (
-                <CatchupToast
-                    elapsedSeconds={catchupSec}
-                    onApply={handleApplyCatchup}
-                    onDismiss={handleDismissCatchup}
-                />
+            {/* Spotify Connect Pill */}
+            <div className="w-full flex justify-center">
+                <SpotifyConnect />
+            </div>
+
+            {/* Spotify Settings Panel (External or integrated) */}
+            {spotifyOpen && isAuthenticated && (
+                <div className="w-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden animate-in slide-in-from-top-2 fade-in duration-300">
+                    <MusicSettings />
+                </div>
             )}
         </div>
     );

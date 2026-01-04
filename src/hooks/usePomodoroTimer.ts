@@ -39,6 +39,12 @@ export function usePomodoroTimer(opts: Options = {}) {
     // the UI doesn't display this value. Persistence works because completedStudies
     // only changes when tab/secondsLeft also change, which triggers the save effect.
     // If you modify this to update completedStudies independently, ensure persistence still works.
+    // Spotify Sync Callback
+    const syncRef = useRef<((state: "FOCUS" | "BREAK" | "PAUSED") => void) | null>(null);
+    const setSyncCallback = (cb: ((state: "FOCUS" | "BREAK" | "PAUSED") => void) | null) => {
+        syncRef.current = cb;
+    };
+
     const completedStudies = useRef<number>(saved?.completedStudies ?? 0);
     const tickRef = useRef<number | null>(null);
 
@@ -61,9 +67,13 @@ export function usePomodoroTimer(opts: Options = {}) {
                     const next: Tab = isLong ? "long" : "short";
                     setTab(next);
                     setSecondsLeft(durations[next]);
+                    // Sync: Switch to Break music
+                    syncRef.current?.("BREAK");
                 } else {
                     setTab("study");
                     setSecondsLeft(durations["study"]);
+                    // Sync: Switch to Focus music
+                    syncRef.current?.("FOCUS");
                 }
                 onComplete?.(prevTab);
                 return 0;
@@ -78,8 +88,17 @@ export function usePomodoroTimer(opts: Options = {}) {
         };
     }, [isRunning, tab, longEvery, onComplete, durations]);
 
-    const start = () => setIsRunning(true);
-    const pause = () => setIsRunning(false);
+    const start = () => {
+        setIsRunning(true);
+        // Sync: Start music based on current tab
+        syncRef.current?.(tab === "study" ? "FOCUS" : "BREAK");
+    };
+
+    const pause = () => {
+        setIsRunning(false);
+        // Sync: Pause music
+        syncRef.current?.("PAUSED");
+    };
 
     const reset = () => {
         if (tickRef.current) {
@@ -88,6 +107,8 @@ export function usePomodoroTimer(opts: Options = {}) {
         }
         setIsRunning(false);
         setSecondsLeft(durations[tab]);
+        // Sync: Pause music on reset
+        syncRef.current?.("PAUSED");
     };
 
     const switchTab = (t: Tab) => {
@@ -98,12 +119,16 @@ export function usePomodoroTimer(opts: Options = {}) {
         setIsRunning(false);
         setTab(t);
         setSecondsLeft(durations[t]);
+        // Sync: Pause music on tab switch
+        syncRef.current?.("PAUSED");
     };
 
     const setSeconds = (n: number) => {
         setIsRunning(false);
         const clamped = Math.max(0, Math.min(MAX_TIMER_SECONDS, Math.floor(n)));
         setSecondsLeft(clamped);
+        // Sync: Pause music on manual time change? Maybe not strictly necessary but safe
+        syncRef.current?.("PAUSED");
     };
 
     // Apply catch-up but remain PAUSED so the user can choose when to resume
@@ -145,6 +170,8 @@ export function usePomodoroTimer(opts: Options = {}) {
         // Only start if there's time remaining, otherwise timer would be stuck at 0
         if (rem > 0) {
             setIsRunning(true);
+            // Sync: Resume play based on new tab
+            syncRef.current?.(t === "study" ? "FOCUS" : "BREAK");
         }
     };
 
@@ -168,5 +195,6 @@ export function usePomodoroTimer(opts: Options = {}) {
         phaseKind,
         statusText,
         applyCatchup,
+        setSyncCallback,
     };
 }
