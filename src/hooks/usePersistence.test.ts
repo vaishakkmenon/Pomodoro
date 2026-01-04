@@ -68,7 +68,7 @@ describe("usePersistence", () => {
 
     it("applies clampSeconds if provided", () => {
         const api = createMockApi({ secondsLeft: 9999 });
-        const clampSeconds = vi.fn((tab: Tab, secs: number) => Math.min(secs, 1500));
+        const clampSeconds = vi.fn((_tab: Tab, secs: number) => Math.min(secs, 1500));
 
         renderHook(() => usePersistence(api, PERSIST_KEY, { clampSeconds }));
 

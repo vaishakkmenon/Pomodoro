@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DURATIONS, LONG_EVERY, MAX_TIMER_SECONDS, type Tab, TABS } from "@/config/timer";
 import { PERSIST_KEY } from "@/hooks/usePersistence";
+import { safeParseJSON } from "@/lib/json";
 import { isValidSavedState, type TimerSavedState } from "@/types/timer";
 
 export type PhaseKind = "study" | "break";
@@ -13,16 +14,10 @@ type Options = {
 
 function readSaved(): TimerSavedState | null {
     if (typeof window === "undefined") return null;
-    try {
-        const raw = localStorage.getItem(PERSIST_KEY);
-        if (!raw) return null;
-        const s = JSON.parse(raw);
-        if (!isValidSavedState(s)) return null;
-        if (!TABS.includes(s.tab as Tab)) return null;
-        return s as TimerSavedState;
-    } catch {
-        return null;
-    }
+    const raw = localStorage.getItem(PERSIST_KEY);
+    const s = safeParseJSON<TimerSavedState>(raw, isValidSavedState);
+    if (!s || !TABS.includes(s.tab as Tab)) return null;
+    return s;
 }
 
 export function usePomodoroTimer(opts: Options = {}) {
@@ -40,6 +35,10 @@ export function usePomodoroTimer(opts: Options = {}) {
     const [secondsLeft, setSecondsLeft] = useState<number>(initialSeconds);
     const [isRunning, setIsRunning] = useState<boolean>(initialRunning);
 
+    // NOTE: completedStudies is a ref (not state) to avoid extra re-renders since
+    // the UI doesn't display this value. Persistence works because completedStudies
+    // only changes when tab/secondsLeft also change, which triggers the save effect.
+    // If you modify this to update completedStudies independently, ensure persistence still works.
     const completedStudies = useRef<number>(saved?.completedStudies ?? 0);
     const tickRef = useRef<number | null>(null);
 
@@ -69,7 +68,7 @@ export function usePomodoroTimer(opts: Options = {}) {
                 onComplete?.(prevTab);
                 return 0;
             });
-        }, 1000) as unknown as number;
+        }, 1000);
 
         return () => {
             if (tickRef.current) {

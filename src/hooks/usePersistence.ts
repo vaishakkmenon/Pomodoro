@@ -1,6 +1,7 @@
 // src/hooks/usePersistence.ts
 import { useEffect, useRef, useState } from "react";
 import { TABS, type Tab } from "@/config/timer";
+import { safeParseJSON } from "@/lib/json";
 import { isValidSavedState, type TimerSavedState } from "@/types/timer";
 
 export const PERSIST_KEY = "pomodoro:v1";
@@ -58,18 +59,14 @@ export function usePersistence(
         if (typeof window === "undefined") { setHydrated(true); return; }
 
         // If you still want to sanity-clamp seconds on first mount, do it here:
-        try {
-            const raw = localStorage.getItem(storageKey);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (isValidSavedState(parsed) && TABS.includes(parsed.tab as Tab) && opts.clampSeconds) {
-                    const clamped = opts.clampSeconds(parsed.tab as Tab, parsed.seconds);
-                    if (clamped !== parsed.seconds) {
-                        localStorage.setItem(storageKey, JSON.stringify({ ...parsed, seconds: clamped }));
-                    }
-                }
+        const raw = localStorage.getItem(storageKey);
+        const parsed = safeParseJSON<TimerSavedState>(raw, isValidSavedState);
+        if (parsed && TABS.includes(parsed.tab as Tab) && opts.clampSeconds) {
+            const clamped = opts.clampSeconds(parsed.tab as Tab, parsed.seconds);
+            if (clamped !== parsed.seconds) {
+                localStorage.setItem(storageKey, JSON.stringify({ ...parsed, seconds: clamped }));
             }
-        } catch { }
+        }
         setHydrated(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -135,13 +132,16 @@ export function usePersistence(
 
 export function useStoredState<T>(key: string, initial: T) {
     const [value, setValue] = useState<T>(() => {
-        try {
-            const raw = localStorage.getItem(key);
-            return raw ? (JSON.parse(raw) as T) : initial;
-        } catch {
-            return initial;
-        }
+        const raw = localStorage.getItem(key);
+        const parsed = safeParseJSON<T>(raw);
+        return parsed ?? initial;
     });
+
+    // Store current value in ref to avoid re-attaching listeners on every change
+    const valueRef = useRef(value);
+    useEffect(() => {
+        valueRef.current = value;
+    }, [value]);
 
     // Persist on state changes
     useEffect(() => {
@@ -153,7 +153,7 @@ export function useStoredState<T>(key: string, initial: T) {
     // Write a final snapshot on pagehide / beforeunload (mirrors your timer behavior)
     useEffect(() => {
         const write = () => {
-            try { localStorage.setItem(key, JSON.stringify(value)); } catch { }
+            try { localStorage.setItem(key, JSON.stringify(valueRef.current)); } catch { }
         };
         window.addEventListener("pagehide", write);
         window.addEventListener("beforeunload", write);
@@ -161,7 +161,7 @@ export function useStoredState<T>(key: string, initial: T) {
             window.removeEventListener("pagehide", write);
             window.removeEventListener("beforeunload", write);
         };
-    }, [key, value]);
+    }, [key]); // Only re-attach if key changes, not value
 
     return [value, setValue] as const;
 }

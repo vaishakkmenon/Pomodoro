@@ -13,7 +13,7 @@ type Props = {
 export default function CatchupToast({ elapsedSeconds, onApply, onDismiss }: Props) {
     return (
         <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
-            <div className="rounded-xl border border-white/15 bg-zinc-900/90 px-4 py-3 shadow-lg backdrop-blur">
+            <div role="alert" className="rounded-xl border border-white/15 bg-zinc-900/90 px-4 py-3 shadow-lg backdrop-blur">
                 <div className="flex items-center gap-3">
                     <span className="text-sm text-white">
                         You were away for <span className="font-semibold">{formatTime(elapsedSeconds)}</span>. Apply catch-up?

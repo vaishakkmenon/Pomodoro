@@ -33,3 +33,20 @@ export function isValidSavedState(x: unknown): x is TimerSavedState {
         // completedStudies and savedAt are optional for backwards compatibility
     );
 }
+
+/**
+ * Minimal state needed for catch-up prompt check.
+ */
+export type CatchupCheckState = {
+    running: boolean;
+    savedAt: number;
+};
+
+/**
+ * Type guard for catch-up check state.
+ */
+export function isValidCatchupState(x: unknown): x is CatchupCheckState {
+    if (!x || typeof x !== "object") return false;
+    const obj = x as Record<string, unknown>;
+    return typeof obj.running === "boolean" && typeof obj.savedAt === "number";
+}

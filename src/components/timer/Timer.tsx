@@ -10,6 +10,8 @@ import TimeDisplay from "@/components/timer/TimeDisplay";
 import TimerControls from "@/components/timer/TimerControls";
 import CatchupToast from "@/components/timer/CatchupToast";
 import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
+import { safeParseJSON } from "@/lib/json";
+import { isValidCatchupState, type CatchupCheckState } from "@/types/timer";
 
 export default function Timer() {
     // Chime only when a study session completes
@@ -34,17 +36,14 @@ export default function Timer() {
     const catchupSavedAtRef = useRef<number | null>(null);
 
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem(PERSIST_KEY);
-            if (!raw) return;
-            const s = JSON.parse(raw) as { running?: boolean; savedAt?: number };
-            if (!s?.running || !s?.savedAt) return;
-            const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
-            if (elapsed >= CATCHUP_MIN_SECONDS && elapsed <= CATCHUP_MAX_SECONDS) {
-                catchupSavedAtRef.current = s.savedAt;
-                setCatchupSec(elapsed);
-            }
-        } catch { /* ignore */ }
+        const raw = localStorage.getItem(PERSIST_KEY);
+        const s = safeParseJSON<CatchupCheckState>(raw, isValidCatchupState);
+        if (!s?.running) return;
+        const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
+        if (elapsed >= CATCHUP_MIN_SECONDS && elapsed <= CATCHUP_MAX_SECONDS) {
+            catchupSavedAtRef.current = s.savedAt;
+            setCatchupSec(elapsed);
+        }
     }, []);
 
     const handleApplyCatchup = () => {
