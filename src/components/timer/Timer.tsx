@@ -1,3 +1,5 @@
+"use client";
+
 // src/components/timer/Timer.tsx
 import { useEffect, useRef, useState } from "react";
 import type { Phase } from "@/ui/types";

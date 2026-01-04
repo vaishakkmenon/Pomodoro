@@ -1,0 +1,40 @@
+[build]
+  command = "npm run build"
+  publish = "out"
+
+# Spotify Edge Functions
+[[edge_functions]]
+  path = "/api/spotify/login"
+  function = "spotify-login"
+
+[[edge_functions]]
+  path = "/api/spotify/callback"
+  function = "spotify-callback"
+
+[[edge_functions]]
+  path = "/api/spotify/playlists"
+  function = "spotify-playlists"
+
+[[edge_functions]]
+  path = "/api/spotify/sync"
+  function = "spotify-sync"
+
+[[edge_functions]]
+  path = "/api/spotify/settings"
+  function = "spotify-settings"
+
+[[edge_functions]]
+  path = "/api/spotify/session"
+  function = "spotify-session"
+
+[[edge_functions]]
+  path = "/api/spotify/logout"
+  function = "spotify-logout"
+
+# Security Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

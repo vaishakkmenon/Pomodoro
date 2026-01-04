@@ -37,7 +37,11 @@ export default function TimerControls({
                 phase={phase}
                 onClick={() => {
                     onPrimeAudio();
-                    isRunning ? onPause() : onStart();
+                    if (isRunning) {
+                        onPause();
+                    } else {
+                        onStart();
+                    }
                 }}
                 aria-pressed={isRunning}
                 className="min-w-28 justify-center !text-lg !px-4 !py-2 disabled:opacity-50 disabled:cursor-not-allowed"

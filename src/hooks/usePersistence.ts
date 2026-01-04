@@ -84,7 +84,7 @@ export function usePersistence(
                 completedStudies,
                 savedAt: Date.now(),
             };
-            try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
+            try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { /* ignore */ }
         };
 
         if (opts.saveThrottleMs && opts.saveThrottleMs > 0) {
@@ -108,7 +108,7 @@ export function usePersistence(
                 completedStudies,
                 savedAt: Date.now(),
             };
-            try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { }
+            try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { /* ignore */ }
         };
 
         const onPageHide = () => saveNow();
@@ -147,13 +147,13 @@ export function useStoredState<T>(key: string, initial: T) {
     useEffect(() => {
         try {
             localStorage.setItem(key, JSON.stringify(value));
-        } catch { }
+        } catch { /* ignore */ }
     }, [key, value]);
 
     // Write a final snapshot on pagehide / beforeunload (mirrors your timer behavior)
     useEffect(() => {
         const write = () => {
-            try { localStorage.setItem(key, JSON.stringify(valueRef.current)); } catch { }
+            try { localStorage.setItem(key, JSON.stringify(valueRef.current)); } catch { /* ignore */ }
         };
         window.addEventListener("pagehide", write);
         window.addEventListener("beforeunload", write);

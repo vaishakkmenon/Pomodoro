@@ -29,7 +29,7 @@ export function useAudio(src: string, { volume = 1 }: Options = {}) {
         try {
             a.currentTime = 0;
             await a.play();
-        } catch { }
+        } catch { /* ignore */ }
     };
 
     const prime = async () => {
@@ -43,7 +43,7 @@ export function useAudio(src: string, { volume = 1 }: Options = {}) {
             a.currentTime = 0;
             a.muted = false;
             primedRef.current = true;
-        } catch { }
+        } catch { /* ignore */ }
     };
 
     return { play, prime, elementRef: elRef };
