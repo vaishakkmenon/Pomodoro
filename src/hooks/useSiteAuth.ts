@@ -10,6 +10,9 @@ interface UseSiteAuthReturn {
     isLoading: boolean;
     error: string | null;
     login: (email: string) => Promise<{ error: AuthError | null }>;
+    loginWithPassword: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+    signupWithPassword: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+    resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
     logout: () => Promise<void>;
     clearError: () => void;
 }
@@ -98,7 +101,7 @@ export function useSiteAuth(): UseSiteAuthReturn {
             options: {
                 // Redirect back to the app after clicking the magic link
                 emailRedirectTo: typeof window !== "undefined"
-                    ? window.location.origin
+                    ? `${window.location.origin}/auth/callback`
                     : undefined,
             },
         });
@@ -110,12 +113,52 @@ export function useSiteAuth(): UseSiteAuthReturn {
         return { error };
     }, []);
 
+    // Password Login
+    const loginWithPassword = useCallback(async (email: string, password: string) => {
+        setError(null);
+        const { error } = await supabase.auth.signInWithPassword({
+            email: email.toLowerCase().trim(),
+            password,
+        });
+        if (error) setError(error.message);
+        return { error };
+    }, []);
+
+    // Password Signup
+    const signupWithPassword = useCallback(async (email: string, password: string) => {
+        setError(null);
+        const { error } = await supabase.auth.signUp({
+            email: email.toLowerCase().trim(),
+            password,
+            options: {
+                // If email confirmation is enabled, this manages the redirect
+                emailRedirectTo: typeof window !== "undefined"
+                    ? `${window.location.origin}/auth/callback`
+                    : undefined,
+            }
+        });
+        if (error) setError(error.message);
+        return { error };
+    }, []);
+
+    // Password Reset
+    const resetPassword = useCallback(async (email: string) => {
+        setError(null);
+        const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+            redirectTo: typeof window !== "undefined"
+                ? `${window.location.origin}/auth/callback?type=recovery`
+                : undefined,
+        });
+        if (error) setError(error.message);
+        return { error };
+    }, []);
+
     // Logout
     const logout = useCallback(async () => {
         console.log("Logout hook: starting");
         setError(null);
 
-        // Clear Spotify session first (if connected)
+        // 1. Clear Spotify session first (if connected)
         try {
             console.log("Logout hook: calling spotify logout api");
             await fetch("/api/spotify/logout", {
@@ -127,19 +170,32 @@ export function useSiteAuth(): UseSiteAuthReturn {
             console.error("Logout hook: spotify api failed", e);
         }
 
-        // Then sign out of site
-        console.log("Logout hook: signing out of supabase");
-
-        // Optimistic update: Clear state immediately so UI feels responsive
+        // 2. Optimistic update: Clear state immediately so UI feels responsive
+        console.log("Logout hook: clearing local state");
         setUser(null);
         setIsPremium(false);
 
-        // Perform signout in background (don't await it to block UI)
-        supabase.auth.signOut().then(() => {
-            console.log("Logout hook: supabase signout done");
-        }).catch(err => {
+        // 3. Sign out of Supabase (BEFORE clearing storage so it finds the session)
+        console.log("Logout hook: signing out of supabase");
+        await supabase.auth.signOut().catch(err => {
             console.error("Logout hook: supabase signout failed", err);
         });
+
+        // 4. Nuclear option: Explicitly clear any lingering client-side cookies AND storage
+        if (typeof document !== "undefined") {
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            // Clear local storage (where Supabase persists session)
+            localStorage.clear();
+            sessionStorage.clear();
+        }
+
+        // 5. Hard reload the page to reset all states and prevent any modal popups
+        console.log("Logout hook: reloading page");
+        window.location.reload();
     }, []);
 
     // Clear error
@@ -153,6 +209,9 @@ export function useSiteAuth(): UseSiteAuthReturn {
         isLoading,
         error,
         login,
+        loginWithPassword,
+        signupWithPassword,
+        resetPassword,
         logout,
         clearError,
     };
