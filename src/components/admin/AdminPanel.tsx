@@ -63,8 +63,8 @@ export function AdminPanel({ isModal = false, onClose, user: propUser }: AdminPa
                 setMessage("");
             }, 3000);
 
-        } catch (err) {
-            setStatus("error");
+        } catch {
+            // ignore
             setMessage("Error adding user.");
         }
     };

@@ -92,6 +92,24 @@ export function useSiteAuth(): UseSiteAuthReturn {
         };
     }, [checkPremiumStatus]);
 
+    // Handle cross-tab login sync
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const channel = new BroadcastChannel('auth_sync');
+        channel.onmessage = (event) => {
+            if (event.data === 'login_success') {
+                console.log("Global Auth: Received login signal from another tab");
+                // Reload or refetch session. For now, a hard reload ensures clean state.
+                window.location.reload();
+            }
+        };
+
+        return () => {
+            channel.close();
+        };
+    }, []);
+
     // Magic Link login
     const login = useCallback(async (email: string) => {
         setError(null);
@@ -175,9 +193,8 @@ export function useSiteAuth(): UseSiteAuthReturn {
         setUser(null);
         setIsPremium(false);
 
-        // 3. Sign out of Supabase (BEFORE clearing storage so it finds the session)
-        console.log("Logout hook: signing out of supabase");
-        await supabase.auth.signOut().catch(err => {
+        // 3. Supabase SignOut (Scope: local ensures we don't hang on network)
+        await supabase.auth.signOut({ scope: 'local' }).catch(err => {
             console.error("Logout hook: supabase signout failed", err);
         });
 
@@ -194,8 +211,8 @@ export function useSiteAuth(): UseSiteAuthReturn {
         }
 
         // 5. Hard reload the page to reset all states and prevent any modal popups
-        console.log("Logout hook: reloading page");
-        window.location.reload();
+        console.log("Logout hook: redirecting to root");
+        window.location.href = "/";
     }, []);
 
     // Clear error

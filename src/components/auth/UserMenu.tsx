@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSiteAuth } from "@/hooks/useSiteAuth";
 import { LoginModal } from "./LoginModal";
-import { User, Settings, LogOut, ShieldCheck, Music } from "lucide-react";
+import { User, LogOut, ShieldCheck, Music } from "lucide-react";
 import { AdminPanel } from "@/components/admin/AdminPanel"; // We will modify this component slightly or control its visibility here
 
 export function UserMenu() {
@@ -56,9 +56,9 @@ export function UserMenu() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-                    w-10 h-10 flex items-center justify-center rounded-full 
+                    w-10 h-10 flex items-center justify-center rounded-full
                     bg-gradient-to-br from-white/10 to-white/5 
-                    border border-white/10 hover:border-white/30 
+                    border border-white/10 hover:border-white/30
                     text-white/90 font-semibold text-sm
                     shadow-lg backdrop-blur-md transition-all
                     ${isOpen ? 'ring-2 ring-white/20' : ''}

@@ -67,7 +67,7 @@ export function useSpotifySync(options: UseSpotifySyncOptions = {}) {
                 }
             }, debounceMs);
         },
-        [isAuthenticated, debounceMs, onError]
+        [isAuthenticated, isPremium, debounceMs, onError]
     );
 
     return {

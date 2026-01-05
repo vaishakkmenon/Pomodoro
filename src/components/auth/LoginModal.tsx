@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSiteAuth } from "@/hooks/useSiteAuth";
-import { Mail, Lock, ArrowRight, UserPlus, LogIn } from "lucide-react";
+import { Mail, ArrowRight, Lock } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface LoginModalProps {
@@ -146,14 +146,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
                                 <button
                                     onClick={() => setMethod("password")}
                                     className={`flex-1 py-4 text-sm font-medium transition-colors relative z-10 ${method === "password" ? "text-white" : "text-white/40 hover:text-white/60"
-                                        }`}
+                                        } `}
                                 >
                                     Password
                                 </button>
                                 <button
                                     onClick={() => setMethod("magic_link")}
                                     className={`flex-1 py-4 text-sm font-medium transition-colors relative z-10 ${method === "magic_link" ? "text-white" : "text-white/40 hover:text-white/60"
-                                        }`}
+                                        } `}
                                 >
                                     Magic Link
                                 </button>

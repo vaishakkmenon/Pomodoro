@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useSiteAuth } from "@/hooks/useSiteAuth";
+import { supabase } from "@/lib/supabase";
 import { Lock, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+
 
 export default function UpdatePasswordPage() {
     const router = useRouter();
@@ -51,9 +51,10 @@ export default function UpdatePasswordPage() {
             }, 5000);
 
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : "Failed to update password";
             setStatus("error");
-            setMessage(error.message || "Failed to update password");
+            setMessage(msg);
         } finally {
             setIsSubmitting(false);
         }

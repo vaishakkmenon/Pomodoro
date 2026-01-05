@@ -30,6 +30,8 @@ export function usePersistence(
     storageKey = PERSIST_KEY,
     opts: Options = {}
 ) {
+    // Destructure options to avoid object dependency
+    const { clampSeconds, saveThrottleMs } = opts;
     const hydratedRef = useRef(false);
     const [hydrated, setHydrated] = useState(false);
 
@@ -61,8 +63,9 @@ export function usePersistence(
         // If you still want to sanity-clamp seconds on first mount, do it here:
         const raw = localStorage.getItem(storageKey);
         const parsed = safeParseJSON<TimerSavedState>(raw, isValidSavedState);
-        if (parsed && TABS.includes(parsed.tab as Tab) && opts.clampSeconds) {
-            const clamped = opts.clampSeconds(parsed.tab as Tab, parsed.seconds);
+
+        if (parsed && TABS.includes(parsed.tab as Tab) && clampSeconds) {
+            const clamped = clampSeconds(parsed.tab as Tab, parsed.seconds);
             if (clamped !== parsed.seconds) {
                 localStorage.setItem(storageKey, JSON.stringify({ ...parsed, seconds: clamped }));
             }
@@ -79,7 +82,7 @@ export function usePersistence(
             const { tab, secondsLeft, isRunning, completedStudies } = stateRef.current;
             const saved: TimerSavedState = {
                 tab,
-                seconds: opts.clampSeconds ? opts.clampSeconds(tab, secondsLeft) : secondsLeft,
+                seconds: clampSeconds ? clampSeconds(tab, secondsLeft) : secondsLeft,
                 running: isRunning,
                 completedStudies,
                 savedAt: Date.now(),
@@ -87,13 +90,13 @@ export function usePersistence(
             try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch { /* ignore */ }
         };
 
-        if (opts.saveThrottleMs && opts.saveThrottleMs > 0) {
-            const id = window.setTimeout(doSave, opts.saveThrottleMs);
+        if (saveThrottleMs && saveThrottleMs > 0) {
+            const id = window.setTimeout(doSave, saveThrottleMs);
             return () => clearTimeout(id);
         } else {
             doSave();
         }
-    }, [hydrated, api.tab, api.secondsLeft, api.isRunning, api.completedStudies, storageKey, opts.saveThrottleMs, opts.clampSeconds]);
+    }, [hydrated, api.tab, api.secondsLeft, api.isRunning, api.completedStudies, storageKey, saveThrottleMs, clampSeconds]);
 
     // Attach page hide/unload listeners ONCE (they read from ref for latest values)
     useEffect(() => {
@@ -103,7 +106,7 @@ export function usePersistence(
             const { tab, secondsLeft, isRunning, completedStudies } = stateRef.current;
             const saved: TimerSavedState = {
                 tab,
-                seconds: opts.clampSeconds ? opts.clampSeconds(tab, secondsLeft) : secondsLeft,
+                seconds: clampSeconds ? clampSeconds(tab, secondsLeft) : secondsLeft,
                 running: isRunning,
                 completedStudies,
                 savedAt: Date.now(),
@@ -125,7 +128,7 @@ export function usePersistence(
             window.removeEventListener("beforeunload", onBeforeUnload);
         };
         // Only depend on hydrated and storageKey - listeners read from stateRef
-    }, [hydrated, storageKey, opts.clampSeconds]);
+    }, [hydrated, storageKey, clampSeconds]);
 
     return { hydrated };
 }

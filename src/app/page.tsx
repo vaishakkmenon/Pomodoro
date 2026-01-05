@@ -1,10 +1,10 @@
 "use client";
 
 
+import { Suspense } from "react";
 import Timer from "@/components/timer/Timer";
 import { SpotifyErrorHandler } from "@/components/spotify/SpotifyErrorHandler";
 import { UserMenu } from "@/components/auth/UserMenu";
-import { AdminPanel } from "@/components/admin/AdminPanel"; // Keep AdminPanel here if you want it independently or remove it. But UserMenu handles it now. actually let's remove it from here.
 
 export default function Home() {
     return (
@@ -15,7 +15,9 @@ export default function Home() {
             </div>
 
             <Timer />
-            <SpotifyErrorHandler />
+            <Suspense fallback={null}>
+                <SpotifyErrorHandler />
+            </Suspense>
         </main>
     );
 }
