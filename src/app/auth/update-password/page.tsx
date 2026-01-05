@@ -43,6 +43,13 @@ export default function UpdatePasswordPage() {
             setStatus("success");
             setMessage("Password updated successfully!");
 
+            // Attempt to close tab after 2.5s
+            setTimeout(() => {
+                window.opener = null;
+                window.open("", "_self");
+                window.close();
+            }, 5000);
+
 
         } catch (error: any) {
             setStatus("error");
@@ -69,13 +76,21 @@ export default function UpdatePasswordPage() {
                     <div className="text-center py-8 animate-in fade-in zoom-in duration-300">
                         <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
                         <h2 className="text-xl font-semibold text-white mb-2">All Set!</h2>
-                        <p className="text-white/60 text-sm mb-6">You can safely close this tab and return to the app.</p>
-                        <button
-                            onClick={() => router.push("/")}
-                            className="text-sm text-white/40 hover:text-white transition-colors underline"
-                        >
-                            Return to App
-                        </button>
+                        <p className="text-white/60 text-sm mb-6">Closing this tab in a few seconds...</p>
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={() => window.close()}
+                                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors text-sm"
+                            >
+                                Close Tab Now
+                            </button>
+                            <button
+                                onClick={() => router.push("/")}
+                                className="text-xs text-white/30 hover:text-white transition-colors"
+                            >
+                                Return to App
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -48,8 +48,13 @@ export default function AuthCallbackPage() {
                     window.location.replace("/auth/update-password");
                 } else {
                     setStatus("success");
-                    setMessage("You are logged in!");
+                    setMessage("You are logged in! Closing tab...");
                     window.history.replaceState(null, "", window.location.pathname);
+                    setTimeout(() => {
+                        window.opener = null;
+                        window.open("", "_self");
+                        window.close();
+                    }, 5000);
                 }
             } else {
                 // Listen for auth changes if no session yet
@@ -61,8 +66,14 @@ export default function AuthCallbackPage() {
 
                     if (event === "SIGNED_IN" && session) {
                         setStatus("success");
-                        setMessage("You are logged in!");
+                        // delay message update to prevent flash if immediate close works (unlikely but safe)
+                        setMessage("You are logged in! Closing tab...");
                         window.history.replaceState(null, "", window.location.pathname);
+                        setTimeout(() => {
+                            window.opener = null;
+                            window.open("", "_self");
+                            window.close();
+                        }, 2500);
                     }
                 });
 
