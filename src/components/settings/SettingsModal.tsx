@@ -198,6 +198,40 @@ export function SettingsModal({
                                         onChange={(checked) => updateNotifications(checked)}
                                     />
                                 </div>
+                                {localSettings.notifications.enabled && (
+                                    <div className="mt-3 flex justify-end">
+                                        <button
+                                            onClick={async () => {
+                                                if (!("Notification" in window)) {
+                                                    alert("This browser does not support desktop notifications.");
+                                                    return;
+                                                }
+
+                                                if (Notification.permission === "granted") {
+                                                    new Notification("Test Notification", {
+                                                        body: "If you see this, it works!",
+                                                        icon: "/favicon.svg"
+                                                    });
+                                                } else if (Notification.permission !== "denied") {
+                                                    const permission = await Notification.requestPermission();
+                                                    if (permission === "granted") {
+                                                        new Notification("Test Notification", {
+                                                            body: "Permission granted! Notifications will now work.",
+                                                            icon: "/favicon.svg"
+                                                        });
+                                                    } else {
+                                                        alert("Permission was denied. You need to enable notifications in your browser settings for this site.");
+                                                    }
+                                                } else {
+                                                    alert("Notifications are blocked by your browser settings. Please enable them manually for this site.");
+                                                }
+                                            }}
+                                            className="text-xs text-white/50 hover:text-white underline underline-offset-2"
+                                        >
+                                            Send Test Notification
+                                        </button>
+                                    </div>
+                                )}
                             </section>
                         </div>
                     </motion.div>

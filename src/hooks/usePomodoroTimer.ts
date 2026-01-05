@@ -78,6 +78,13 @@ export function usePomodoroTimer(opts: Options = {}) {
 
     const tickRef = useRef<number | null>(null);
 
+    // We need a ref for secondsLeft so the interval can read the latest value
+    // without needing to be recreated on every tick (which would be messy).
+    const secondsRef = useRef(secondsLeft);
+    useEffect(() => {
+        secondsRef.current = secondsLeft;
+    }, [secondsLeft]);
+
     // ticking loop
     useEffect(() => {
         if (tickRef.current) {
@@ -87,12 +94,14 @@ export function usePomodoroTimer(opts: Options = {}) {
         if (!isRunning) return;
 
         tickRef.current = window.setInterval(() => {
-            setSecondsLeft((s) => {
-                if (s > 1) return s - 1;
+            const current = secondsRef.current;
+
+            if (current <= 1) {
+                // Timer Logic: Timer Completed
+                // We perform the logic HERE, once per tick, instead of inside the setter.
 
                 const prevTab = tab;
 
-                // --- Timer Completed ---
                 if (settings?.notifications.enabled) {
                     sendNotification(
                         prevTab === "study" ? "Focus session complete!" : "Break over!",
@@ -107,8 +116,12 @@ export function usePomodoroTimer(opts: Options = {}) {
                     completedStudies.current += 1;
                     const isLong = completedStudies.current % longEvery === 0;
                     const next: Tab = isLong ? "long" : "short";
+
                     setTab(next);
                     setSecondsLeft(durationMap[next]);
+                    // Note: setSecondsLeft updates the state, which updates secondsRef via the effect above.
+                    // But for this tick, we are done.
+
                     // Sync: Switch to Break music
                     syncRef.current?.("BREAK");
                 } else {
@@ -118,8 +131,10 @@ export function usePomodoroTimer(opts: Options = {}) {
                     syncRef.current?.("FOCUS");
                 }
                 onComplete?.(prevTab);
-                return 0;
-            });
+            } else {
+                // Just tick down
+                setSecondsLeft(s => s - 1);
+            }
         }, 1000);
 
         return () => {

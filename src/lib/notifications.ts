@@ -15,7 +15,7 @@ export function sendNotification(title: string, body?: string) {
     try {
         new Notification(title, {
             body,
-            icon: "/icon.png", // Ensure this exists or use a default
+            icon: "/favicon.svg", // Ensure this exists or use a default
         });
     } catch (e) {
         console.error("Notification failed", e);
