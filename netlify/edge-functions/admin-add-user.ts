@@ -1,6 +1,6 @@
 import { handleCors, jsonResponse, errorResponse } from "./_shared/cors.ts";
-import { getSession } from "./_shared/session.ts";
 import { getSupabase } from "./_shared/supabase.ts";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 
@@ -66,7 +66,7 @@ export default async function handler(request: Request): Promise<Response> {
             .from("allowed_users")
             .insert([{ email: email.toLowerCase(), is_active: true }]);
 
-        console.log("[Admin] Insert result error:", error);
+
 
         if (error) {
             // Ignore duplicate error

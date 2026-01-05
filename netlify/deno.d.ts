@@ -1,9 +1,10 @@
-// Basic type definitions for Deno global required for Netlify Edge Functions
-// This prevents "Cannot find name 'Deno'" errors in TypeScript
+export { };
 
-declare namespace Deno {
-    export const env: {
-        get(key: string): string | undefined;
-        toObject(): { [key: string]: string };
+declare global {
+    const Deno: {
+        env: {
+            get(key: string): string | undefined;
+            toObject(): { [key: string]: string };
+        };
     };
 }

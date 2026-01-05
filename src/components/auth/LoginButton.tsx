@@ -31,7 +31,6 @@ export function LoginButton() {
                 </div>
                 <button
                     onClick={() => {
-                        console.log("Logout button clicked");
                         logout();
                     }}
                     className="text-sm text-white/50 hover:text-white transition-colors"
