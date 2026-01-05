@@ -11,6 +11,19 @@ export default function AuthCallbackPage() {
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
     const [message, setMessage] = useState("Verifying login...");
 
+    const pollForSession = async () => {
+        for (let i = 0; i < 6; i++) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                handleSuccess();
+                return;
+            }
+        }
+        setStatus("error");
+        setMessage("Verification timed out.");
+    };
+
     useEffect(() => {
         const handleAuth = async () => {
             const searchParams = new URLSearchParams(window.location.search);
@@ -60,7 +73,7 @@ export default function AuthCallbackPage() {
 
                 handleSuccess();
 
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Auth Error:", err);
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
@@ -74,20 +87,8 @@ export default function AuthCallbackPage() {
         };
 
         handleAuth();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    const pollForSession = async () => {
-        for (let i = 0; i < 6; i++) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                handleSuccess();
-                return;
-            }
-        }
-        setStatus("error");
-        setMessage("Verification timed out.");
-    };
 
     // --- THE HYBRID LOGIC ---
     const handleSuccess = () => {
@@ -99,7 +100,7 @@ export default function AuthCallbackPage() {
             const channel = new BroadcastChannel('auth_sync');
             channel.postMessage('login_success');
             channel.close();
-        } catch (e) { /* Ignore */ }
+        } catch { /* Ignore */ }
 
         // 2. Attempt to Close
         setTimeout(() => {
@@ -107,7 +108,7 @@ export default function AuthCallbackPage() {
                 window.opener = null;
                 window.open("", "_self");
                 window.close();
-            } catch (e) {
+            } catch {
                 console.warn("Auto-close blocked");
             }
 

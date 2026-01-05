@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { DURATIONS, LONG_EVERY, MAX_TIMER_SECONDS, type Tab, TABS } from "@/config/timer";
 import { PERSIST_KEY } from "@/hooks/usePersistence";
 import { safeParseJSON } from "@/lib/json";
 import { isValidSavedState, type TimerSavedState } from "@/types/timer";
+import type { Settings } from "@/types/settings";
+import { sendNotification } from "@/lib/notifications";
+import { chimePlayer } from "@/lib/audio";
 
 export type PhaseKind = "study" | "break";
 
 type Options = {
-    durations?: typeof DURATIONS;
-    longEvery?: number;
+    settings?: Settings;
     onComplete?: (prevTab: Tab) => void;
 };
 
@@ -21,19 +23,48 @@ function readSaved(): TimerSavedState | null {
 }
 
 export function usePomodoroTimer(opts: Options = {}) {
-    const durations = opts.durations ?? DURATIONS;
-    const longEvery = opts.longEvery ?? LONG_EVERY;
+    // Map settings to duration object, fallback to defaults if no settings
+    const settings = opts.settings;
+
+    // Convert minutes to seconds for internal logic
+    // We need a stable duration map. If settings change, this changes.
+    const durationMap: Record<Tab, number> = useMemo(() => settings ? {
+        study: settings.durations.work * 60,
+        short: settings.durations.shortBreak * 60,
+        long: settings.durations.longBreak * 60,
+    } : DURATIONS, [settings]);
+
+    const longEvery = settings?.longBreakInterval ?? LONG_EVERY;
     const { onComplete } = opts;
 
-    // ---- synchronous hydration (PAUSED on return) ----
-    const saved = readSaved();
-    const initialTab: Tab = (saved?.tab as Tab) ?? "study";
-    const initialSeconds = saved?.seconds ?? durations[initialTab];
-    const initialRunning = false; // <— always pause on load
+    // ---- Safe hydration pattern ----
+    // 1. Initialize with server-safe defaults (no localStorage access)
+    // 2. Hydrate from localStorage in useEffect
 
-    const [tab, setTab] = useState<Tab>(initialTab);
-    const [secondsLeft, setSecondsLeft] = useState<number>(initialSeconds);
-    const [isRunning, setIsRunning] = useState<boolean>(initialRunning);
+    // Default start state
+    const [tab, setTab] = useState<Tab>("study");
+    // completedStudies needs to be a ref for persistence logic, but we can init it to 0
+    const completedStudies = useRef<number>(0);
+
+    const [secondsLeft, setSecondsLeft] = useState<number>(durationMap["study"]);
+    const [isRunning, setIsRunning] = useState<boolean>(false);
+
+    // Hydrate effect
+    useEffect(() => {
+        const saved = readSaved();
+        if (saved) {
+            setTab(saved.tab as Tab);
+            setSecondsLeft(saved.seconds);
+            completedStudies.current = saved.completedStudies;
+            // Ensure we don't auto-start on reload, or keep it paused
+            setIsRunning(false);
+        }
+    }, []); // Run once on mount
+
+    // Update secondsLeft if settings change and we are at the "start" of a timer? 
+    // Actually, we shouldn't arbitrarily change secondsLeft if settings change UNLESS we haven't loaded saved state yet
+    // OR if we want live updates. But for this fix, we just ensure simple hydration.
+
 
     // NOTE: completedStudies is a ref (not state) to avoid extra re-renders since
     // the UI doesn't display this value. Persistence works because completedStudies
@@ -45,7 +76,6 @@ export function usePomodoroTimer(opts: Options = {}) {
         syncRef.current = cb;
     };
 
-    const completedStudies = useRef<number>(saved?.completedStudies ?? 0);
     const tickRef = useRef<number | null>(null);
 
     // ticking loop
@@ -61,17 +91,29 @@ export function usePomodoroTimer(opts: Options = {}) {
                 if (s > 1) return s - 1;
 
                 const prevTab = tab;
+
+                // --- Timer Completed ---
+                if (settings?.notifications.enabled) {
+                    sendNotification(
+                        prevTab === "study" ? "Focus session complete!" : "Break over!",
+                        prevTab === "study" ? "Time for a break." : "Ready to focus?"
+                    );
+                }
+                if (settings?.sound.enabled) {
+                    chimePlayer.play(settings.sound.volume);
+                }
+
                 if (prevTab === "study") {
                     completedStudies.current += 1;
                     const isLong = completedStudies.current % longEvery === 0;
                     const next: Tab = isLong ? "long" : "short";
                     setTab(next);
-                    setSecondsLeft(durations[next]);
+                    setSecondsLeft(durationMap[next]);
                     // Sync: Switch to Break music
                     syncRef.current?.("BREAK");
                 } else {
                     setTab("study");
-                    setSecondsLeft(durations["study"]);
+                    setSecondsLeft(durationMap["study"]);
                     // Sync: Switch to Focus music
                     syncRef.current?.("FOCUS");
                 }
@@ -86,7 +128,7 @@ export function usePomodoroTimer(opts: Options = {}) {
                 tickRef.current = null;
             }
         };
-    }, [isRunning, tab, longEvery, onComplete, durations]);
+    }, [isRunning, tab, longEvery, onComplete, durationMap, settings]);
 
     const start = () => {
         setIsRunning(true);
@@ -106,7 +148,7 @@ export function usePomodoroTimer(opts: Options = {}) {
             tickRef.current = null;
         }
         setIsRunning(false);
-        setSecondsLeft(durations[tab]);
+        setSecondsLeft(durationMap[tab]);
         // Sync: Pause music on reset
         syncRef.current?.("PAUSED");
     };
@@ -118,7 +160,7 @@ export function usePomodoroTimer(opts: Options = {}) {
         }
         setIsRunning(false);
         setTab(t);
-        setSecondsLeft(durations[t]);
+        setSecondsLeft(durationMap[t]);
         // Sync: Pause music on tab switch
         syncRef.current?.("PAUSED");
     };
@@ -157,10 +199,10 @@ export function usePomodoroTimer(opts: Options = {}) {
                 cs += 1;
                 const isLong = cs % longEvery === 0;
                 t = isLong ? "long" : "short";
-                rem = durations[t];
+                rem = durationMap[t];
             } else {
                 t = "study";
-                rem = durations.study;
+                rem = durationMap.study;
             }
         }
 
@@ -175,7 +217,7 @@ export function usePomodoroTimer(opts: Options = {}) {
         }
     };
 
-    const atFull = secondsLeft === durations[tab];
+    const atFull = secondsLeft === durationMap[tab];
     const isDone = secondsLeft === 0;
     const phaseKind: PhaseKind = tab === "study" ? "study" : "break";
     const statusText = isDone ? "Finished" : isRunning ? "Running" : atFull ? "Ready" : "Paused";

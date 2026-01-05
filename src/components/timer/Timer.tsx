@@ -20,16 +20,35 @@ import { SpotifyConnect } from "@/components/spotify/SpotifyConnect";
 import { useSpotifySync } from "@/hooks/useSpotifySync";
 import { useSiteAuth } from "@/hooks/useSiteAuth";
 
+// Settings Integration
+import { Settings as SettingsIcon } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
+import { SettingsModal } from "@/components/settings/SettingsModal";
+import { requestNotificationPermission } from "@/lib/notifications";
+
 export default function Timer() {
+    const { settings, updateSettings } = useSettings();
+    const [settingsOpen, setSettingsOpen] = useState(false);
+
+    // Request notification permission if enabled in settings
+    useEffect(() => {
+        if (settings.notifications.enabled) {
+            requestNotificationPermission();
+        }
+    }, [settings.notifications.enabled]);
+
     // Chime only when a study session completes
-    const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", 1.0);
+    const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", settings.sound.volume);
 
     const {
         tab, secondsLeft, isRunning, completedStudies,
         start, pause, reset, switchTab, setSeconds,
         atFull, isDone, phaseKind,
         applyCatchup, setSyncCallback,
-    } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
+    } = usePomodoroTimer({
+        settings, // Pass settings to timer logic
+        onComplete: (prev) => prev === "study" && settings.sound.enabled && playChime()
+    });
 
     // --- Auth & Spotify Integration ---
     const { isPremium } = useSiteAuth();
@@ -101,7 +120,8 @@ export default function Timer() {
             ? "text-emerald-200 ring-emerald-400/40"
             : "text-sky-200 ring-sky-400/40";
 
-    // ----- Keyboard navigation -----
+    // ----- Keyboard navigation (omitted/unchanged details) -----
+    // Re-implementing unchanged helper functions to keep context valid within replacement
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
         if (!menuOpen) return;
         const target = e.target as HTMLElement;
@@ -223,7 +243,16 @@ export default function Timer() {
                         </button>
                     </div>
 
-                    {/* Right side: Auth - Moved to page layout */}
+                    <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                        title="Open Settings"
+                    >
+                        <SettingsIcon className="w-5 h-5 text-white/70" />
+                        <span className="sr-only">Open Settings</span>
+                    </button>
                 </div>
 
                 <div className={cx("flex transition-[gap] duration-700 ease-in-out", menuOpen ? "gap-6" : "gap-0")}>
@@ -318,6 +347,14 @@ export default function Timer() {
                     <MusicSettings />
                 </div>
             )}
+
+            {/* Settings Modal */}
+            <SettingsModal
+                isOpen={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                settings={settings}
+                onUpdateSettings={updateSettings}
+            />
         </div>
     );
 }

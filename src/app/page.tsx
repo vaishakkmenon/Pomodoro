@@ -1,6 +1,5 @@
 "use client";
 
-
 import { Suspense } from "react";
 import Timer from "@/components/timer/Timer";
 import { SpotifyErrorHandler } from "@/components/spotify/SpotifyErrorHandler";
