@@ -3,6 +3,7 @@
 import { useCallback, useRef, useEffect } from "react";
 import { useSpotifyAuth } from "./useSpotifyAuth";
 import type { TimerState } from "@/types/spotify";
+import { useSiteAuth } from "@/hooks/useSiteAuth";
 
 interface UseSpotifySyncOptions {
     /** Debounce delay in ms (default: 500) */
@@ -14,6 +15,7 @@ interface UseSpotifySyncOptions {
 export function useSpotifySync(options: UseSpotifySyncOptions = {}) {
     const { debounceMs = 500, onError } = options;
     const { isAuthenticated } = useSpotifyAuth();
+    const { isPremium } = useSiteAuth();
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastStateRef = useRef<TimerState | null>(null);
 
@@ -28,8 +30,8 @@ export function useSpotifySync(options: UseSpotifySyncOptions = {}) {
 
     const syncPlayback = useCallback(
         (state: TimerState) => {
-            // Skip if not authenticated
-            if (!isAuthenticated) {
+            // Skip if not authenticated or not premium
+            if (!isAuthenticated || !isPremium) {
                 return;
             }
 

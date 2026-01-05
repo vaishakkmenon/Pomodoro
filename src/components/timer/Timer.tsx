@@ -18,6 +18,7 @@ import { isValidCatchupState, type CatchupCheckState } from "@/types/timer";
 import { MusicSettings } from "@/components/spotify/MusicSettings";
 import { SpotifyConnect } from "@/components/spotify/SpotifyConnect";
 import { useSpotifySync } from "@/hooks/useSpotifySync";
+import { useSiteAuth } from "@/hooks/useSiteAuth";
 
 export default function Timer() {
     // Chime only when a study session completes
@@ -30,7 +31,8 @@ export default function Timer() {
         applyCatchup, setSyncCallback,
     } = usePomodoroTimer({ onComplete: (prev) => prev === "study" && playChime() });
 
-    // --- Spotify Integration ---
+    // --- Auth & Spotify Integration ---
+    const { isPremium } = useSiteAuth();
     const { syncPlayback, isAuthenticated } = useSpotifySync();
 
     useEffect(() => {
@@ -220,6 +222,8 @@ export default function Timer() {
                             <span className="sr-only">Toggle session menu</span>
                         </button>
                     </div>
+
+                    {/* Right side: Auth - Moved to page layout */}
                 </div>
 
                 <div className={cx("flex transition-[gap] duration-700 ease-in-out", menuOpen ? "gap-6" : "gap-0")}>
@@ -277,8 +281,8 @@ export default function Timer() {
                             resetBtnRef={resetBtnRef}
                         />
 
-                        {/* Spotify Settings Toggle (Only if authenticated) */}
-                        {isAuthenticated && (
+                        {/* Spotify Settings Toggle (Only if authenticated AND premium) */}
+                        {isPremium && isAuthenticated && (
                             <div className="mt-6 flex justify-center">
                                 <button
                                     onClick={() => setSpotifyOpen(!spotifyOpen)}
@@ -302,12 +306,14 @@ export default function Timer() {
             </div>
 
             {/* Spotify Connect Pill */}
-            <div className="w-full flex justify-center">
-                <SpotifyConnect />
-            </div>
+            {isPremium && (
+                <div className="w-full flex justify-center">
+                    <SpotifyConnect />
+                </div>
+            )}
 
             {/* Spotify Settings Panel (External or integrated) */}
-            {spotifyOpen && isAuthenticated && (
+            {spotifyOpen && isPremium && isAuthenticated && (
                 <div className="w-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden animate-in slide-in-from-top-2 fade-in duration-300">
                     <MusicSettings />
                 </div>

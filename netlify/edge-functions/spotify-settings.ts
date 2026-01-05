@@ -15,6 +15,23 @@ export default async function handler(request: Request): Promise<Response> {
 
     const supabase = getSupabase();
 
+    // Verify Premium Link
+    const { data: linkedUser } = await supabase
+        .from("users")
+        .select("email")
+        .eq("spotify_user_id", spotifyUserId)
+        .single();
+
+    if (!linkedUser) return errorResponse("Spotify account not linked", 401, "NOT_LINKED");
+
+    const { data: isPremium } = await supabase
+        .from("allowed_users")
+        .select("is_active")
+        .eq("email", linkedUser.email.toLowerCase())
+        .single();
+
+    if (!isPremium?.is_active) return errorResponse("Premium access revoked", 403, "NOT_PREMIUM");
+
     // GET - Fetch preferences
     if (request.method === "GET") {
         const { data: prefs } = await supabase

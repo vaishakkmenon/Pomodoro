@@ -46,3 +46,5 @@ next-env.d.ts
 
 # Project specific
 .claude/
+# Local Netlify folder
+.netlify

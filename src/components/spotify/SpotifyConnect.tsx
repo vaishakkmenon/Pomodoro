@@ -1,9 +1,20 @@
 "use client";
 
 import { useSpotifyAuth } from "@/hooks/useSpotifyAuth";
+import { useSiteAuth } from "@/hooks/useSiteAuth";
 
 export function SpotifyConnect() {
-    const { isAuthenticated, isLoading, user, login, logout } = useSpotifyAuth();
+    const { isAuthenticated, isLoading, user, logout } = useSpotifyAuth();
+    const { user: siteUser } = useSiteAuth();
+
+    const handleConnect = () => {
+        if (!siteUser?.id) {
+            console.error("No site user - should not be able to click this button");
+            return;
+        }
+        // Pass site user ID to edge function for verification and linking
+        window.location.href = `/api/spotify/login?user_id=${siteUser.id}`;
+    };
 
     if (isLoading) {
         return (
@@ -33,7 +44,7 @@ export function SpotifyConnect() {
 
     return (
         <button
-            onClick={login}
+            onClick={handleConnect}
             className="flex items-center gap-2 px-4 py-2 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full font-medium transition-colors cursor-pointer"
         >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

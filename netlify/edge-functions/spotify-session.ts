@@ -12,8 +12,26 @@ export default async function handler(request: Request): Promise<Response> {
         return jsonResponse({ authenticated: false });
     }
 
-    // Get user info from database
     const supabase = getSupabase();
+
+    // Verify Premium Link
+    const { data: linkedUser } = await supabase
+        .from("users")
+        .select("email")
+        .eq("spotify_user_id", spotifyUserId)
+        .single();
+
+    if (!linkedUser) return jsonResponse({ authenticated: false });
+
+    const { data: isPremium } = await supabase
+        .from("allowed_users")
+        .select("is_active")
+        .eq("email", linkedUser.email.toLowerCase())
+        .single();
+
+    if (!isPremium?.is_active) return jsonResponse({ authenticated: false });
+
+    // Get user info from database
     const { data: account, error } = await supabase
         .from("spotify_accounts")
         .select("display_name, email")

@@ -1,6 +1,11 @@
 [build]
   command = "npm run build"
-  publish = "out"
+  publish = ".next"
+
+[dev]
+  command = "npm run dev"
+  port = 8888
+  targetPort = 3000
 
 # Spotify Edge Functions
 [[edge_functions]]
@@ -30,6 +35,10 @@
 [[edge_functions]]
   path = "/api/spotify/logout"
   function = "spotify-logout"
+
+[[edge_functions]]
+  path = "/api/spotify/admin/add-user"
+  function = "admin-add-user"
 
 # Security Headers
 [[headers]]
