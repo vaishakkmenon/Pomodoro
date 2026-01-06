@@ -84,7 +84,7 @@ export default function Home() {
 
             <main
                 className={cx(
-                    "min-h-screen relative flex flex-col items-center justify-center py-10 text-white transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                    "min-h-screen w-screen overflow-x-hidden relative flex flex-col items-center justify-center py-10 text-white transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
                     isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[975px]" : "pl-0"
                 )}
             >
@@ -99,7 +99,7 @@ export default function Home() {
                     updateSettings={updateSettings}
                 />
 
-                <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                <div className="absolute bottom-10 w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
                     <TaskList
                         tasks={tasks}
                         activeTaskId={activeTaskId}
