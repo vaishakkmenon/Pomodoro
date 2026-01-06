@@ -5,6 +5,6 @@ export const phaseAccent = (accent: Accent) => {
     return "bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/25 focus-visible:ring-red-500/40";
   }
   return accent === "focus"
-    ? "bg-emerald-500/10 hover:bg-emerald-400/20 focus-visible:ring-emerald-400/40"
-    : "bg-sky-500/10 hover:bg-sky-400/20 focus-visible:ring-sky-400/40";
+    ? "bg-[var(--accent-primary)]/20 hover:bg-[var(--accent-primary)]/30 focus-visible:ring-[var(--accent-primary)]/40 text-[var(--accent-primary)]"
+    : "bg-[var(--accent-break)]/20 hover:bg-[var(--accent-break)]/30 focus-visible:ring-[var(--accent-break)]/40 text-[var(--accent-break)]";
 };

@@ -15,8 +15,8 @@ export function ProgressBar({ secondsLeft, totalDuration, phase }: ProgressBarPr
         <div className="relative w-full h-2 bg-white/10 overflow-hidden rounded-full backdrop-blur-sm">
             <div
                 className={cx(
-                    "h-full transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(255,255,255,0.5)]",
-                    phase === "focus" ? "bg-emerald-400" : "bg-sky-400"
+                    "h-full transition-all duration-300 ease-out shadow-[0_0_15px_rgba(255,255,255,0.5)]",
+                    phase === "focus" ? "bg-[var(--accent-primary)]" : "bg-[var(--accent-break)]"
                 )}
                 style={{ width: `${progress}%` }}
             />

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Settings } from "@/types/settings";
-import { X, Volume2, VolumeX, Bell, BellOff, Clock, Zap, Music } from "lucide-react";
+import { X, Volume2, VolumeX, Bell, BellOff, Clock, Zap, Music, Palette } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cx } from "@/ui/cx";
+import { ThemeSelector } from "@/components/settings/ThemeSelector";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -21,6 +22,7 @@ export function SettingsModal({
 }: SettingsModalProps) {
     // Local state for immediate feedback before saving or just controlling inputs
     const [localSettings, setLocalSettings] = useState<Settings>(settings);
+    const [activeTab, setActiveTab] = useState<"general" | "appearance">("general");
 
     // Sync local state when prop changes
     useEffect(() => {
@@ -92,173 +94,214 @@ export function SettingsModal({
                             </button>
                         </div>
 
-                        <div className="overflow-y-auto p-6 space-y-8 flex-1">
-                            {/* Timer Durations */}
-                            <section className="space-y-4">
-                                <div className="flex items-center gap-2 text-white/80 font-medium">
-                                    <Clock className="w-4 h-4" />
-                                    <h3>Timer Durations (minutes)</h3>
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs text-white/50">Focus</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="120"
-                                            value={localSettings.durations.work}
-                                            onChange={(e) => updateDuration("work", Number(e.target.value))}
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs text-white/50">Short Break</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="60"
-                                            value={localSettings.durations.shortBreak}
-                                            onChange={(e) => updateDuration("shortBreak", Number(e.target.value))}
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs text-white/50">Long Break</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="60"
-                                            value={localSettings.durations.longBreak}
-                                            onChange={(e) => updateDuration("longBreak", Number(e.target.value))}
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
-                                        />
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* Behavior */}
-                            <section className="space-y-4 pt-4 border-t border-white/5">
-                                <div className="flex items-center gap-2 text-white/80 font-medium">
-                                    <Zap className="w-4 h-4" />
-                                    <h3>Behavior</h3>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm text-white/60">Auto-start Timer</label>
-                                    <Toggle
-                                        checked={localSettings.autoStart}
-                                        onChange={(checked) => updateBehavior("autoStart", checked)}
-                                    />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm text-white/60">Long Break Interval</label>
-                                    <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="10"
-                                            value={localSettings.longBreakInterval}
-                                            onChange={(e) => updateBehavior("longBreakInterval", Number(e.target.value))}
-                                            className="w-16 bg-transparent text-center text-white border-none focus:outline-none font-mono"
-                                        />
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* Sound */}
-                            <section className="space-y-4 pt-4 border-t border-white/5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white/80 font-medium">
-                                        {localSettings.sound.enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                                        <h3>Sound</h3>
-                                    </div>
-                                    <Toggle
-                                        checked={localSettings.sound.enabled}
-                                        onChange={(checked) => updateSound("enabled", checked)}
-                                    />
-                                </div>
-
-                                <div className={cx(
-                                    "transition-all duration-300 overflow-hidden space-y-2",
-                                    localSettings.sound.enabled ? "opacity-100 max-h-20" : "opacity-30 max-h-0 pointer-events-none"
-                                )}>
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-xs text-white/50 w-12">Volume</span>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="1"
-                                            step="0.05"
-                                            value={localSettings.sound.volume}
-                                            onChange={(e) => updateSound("volume", parseFloat(e.target.value))}
-                                            className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                                        />
-                                        <span className="text-xs text-white/50 w-8 text-right">
-                                            {Math.round(localSettings.sound.volume * 100)}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section className="pt-4 border-t border-white/5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white/80 font-medium">
-                                        <Music className="w-4 h-4" />
-                                        <h3>Media Dock</h3>
-                                    </div>
-                                    <Toggle
-                                        checked={localSettings.media?.enabled ?? true}
-                                        onChange={(checked) => updateMedia(checked)}
-                                    />
-                                </div>
-                            </section>
-
-                            {/* Notifications */}
-                            <section className="pt-4 border-t border-white/5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white/80 font-medium">
-                                        {localSettings.notifications.enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-                                        <h3>Notifications</h3>
-                                    </div>
-                                    <Toggle
-                                        checked={localSettings.notifications.enabled}
-                                        onChange={(checked) => updateNotifications(checked)}
-                                    />
-                                </div>
-                                {localSettings.notifications.enabled && (
-                                    <div className="mt-3 flex justify-end">
-                                        <button
-                                            onClick={async () => {
-                                                if (!("Notification" in window)) {
-                                                    alert("This browser does not support desktop notifications.");
-                                                    return;
-                                                }
-
-                                                if (Notification.permission === "granted") {
-                                                    new Notification("Test Notification", {
-                                                        body: "If you see this, it works!",
-                                                        icon: "/favicon.svg"
-                                                    });
-                                                } else if (Notification.permission !== "denied") {
-                                                    const permission = await Notification.requestPermission();
-                                                    if (permission === "granted") {
-                                                        new Notification("Test Notification", {
-                                                            body: "Permission granted! Notifications will now work.",
-                                                            icon: "/favicon.svg"
-                                                        });
-                                                    } else {
-                                                        alert("Permission was denied. You need to enable notifications in your browser settings for this site.");
-                                                    }
-                                                } else {
-                                                    alert("Notifications are blocked by your browser settings. Please enable them manually for this site.");
-                                                }
-                                            }}
-                                            className="text-xs text-white/50 hover:text-white underline underline-offset-2"
-                                        >
-                                            Send Test Notification
-                                        </button>
-                                    </div>
+                        <div className="flex border-b border-white/5">
+                            <button
+                                onClick={() => setActiveTab("general")}
+                                className={cx(
+                                    "flex-1 px-4 py-3 text-sm font-medium transition-colors relative",
+                                    activeTab === "general" ? "text-white" : "text-white/40 hover:text-white/70"
                                 )}
-                            </section>
+                            >
+                                General
+                                {activeTab === "general" && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("appearance")}
+                                className={cx(
+                                    "flex-1 px-4 py-3 text-sm font-medium transition-colors relative",
+                                    activeTab === "appearance" ? "text-white" : "text-white/40 hover:text-white/70"
+                                )}
+                            >
+                                Appearance
+                                {activeTab === "appearance" && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="overflow-y-auto p-6 space-y-8 flex-1">
+                            {activeTab === "general" && (
+                                <>
+                                    {/* Timer Durations */}
+                                    <section className="space-y-4">
+                                        <div className="flex items-center gap-2 text-white/80 font-medium">
+                                            <Clock className="w-4 h-4" />
+                                            <h3>Timer Durations (minutes)</h3>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-white/50">Focus</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="120"
+                                                    value={localSettings.durations.work}
+                                                    onChange={(e) => updateDuration("work", Number(e.target.value))}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-white/50">Short Break</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="60"
+                                                    value={localSettings.durations.shortBreak}
+                                                    onChange={(e) => updateDuration("shortBreak", Number(e.target.value))}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-white/50">Long Break</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="60"
+                                                    value={localSettings.durations.longBreak}
+                                                    onChange={(e) => updateDuration("longBreak", Number(e.target.value))}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
+                                                />
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Behavior */}
+                                    <section className="space-y-4 pt-4 border-t border-white/5">
+                                        <div className="flex items-center gap-2 text-white/80 font-medium">
+                                            <Zap className="w-4 h-4" />
+                                            <h3>Behavior</h3>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm text-white/60">Auto-start Timer</label>
+                                            <Toggle
+                                                checked={localSettings.autoStart}
+                                                onChange={(checked) => updateBehavior("autoStart", checked)}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm text-white/60">Long Break Interval</label>
+                                            <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="10"
+                                                    value={localSettings.longBreakInterval}
+                                                    onChange={(e) => updateBehavior("longBreakInterval", Number(e.target.value))}
+                                                    className="w-16 bg-transparent text-center text-white border-none focus:outline-none font-mono"
+                                                />
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Sound */}
+                                    <section className="space-y-4 pt-4 border-t border-white/5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-white/80 font-medium">
+                                                {localSettings.sound.enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                                                <h3>Sound</h3>
+                                            </div>
+                                            <Toggle
+                                                checked={localSettings.sound.enabled}
+                                                onChange={(checked) => updateSound("enabled", checked)}
+                                            />
+                                        </div>
+
+                                        <div className={cx(
+                                            "transition-all duration-300 overflow-hidden space-y-2",
+                                            localSettings.sound.enabled ? "opacity-100 max-h-20" : "opacity-30 max-h-0 pointer-events-none"
+                                        )}>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-xs text-white/50 w-12">Volume</span>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="1"
+                                                    step="0.05"
+                                                    value={localSettings.sound.volume}
+                                                    onChange={(e) => updateSound("volume", parseFloat(e.target.value))}
+                                                    className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                                />
+                                                <span className="text-xs text-white/50 w-8 text-right">
+                                                    {Math.round(localSettings.sound.volume * 100)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section className="pt-4 border-t border-white/5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-white/80 font-medium">
+                                                <Music className="w-4 h-4" />
+                                                <h3>Media Dock</h3>
+                                            </div>
+                                            <Toggle
+                                                checked={localSettings.media?.enabled ?? true}
+                                                onChange={(checked) => updateMedia(checked)}
+                                            />
+                                        </div>
+                                    </section>
+
+                                    {/* Notifications */}
+                                    <section className="pt-4 border-t border-white/5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-white/80 font-medium">
+                                                {localSettings.notifications.enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                                                <h3>Notifications</h3>
+                                            </div>
+                                            <Toggle
+                                                checked={localSettings.notifications.enabled}
+                                                onChange={(checked) => updateNotifications(checked)}
+                                            />
+                                        </div>
+                                        {localSettings.notifications.enabled && (
+                                            <div className="mt-3 flex justify-end">
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!("Notification" in window)) {
+                                                            alert("This browser does not support desktop notifications.");
+                                                            return;
+                                                        }
+
+                                                        if (Notification.permission === "granted") {
+                                                            new Notification("Test Notification", {
+                                                                body: "If you see this, it works!",
+                                                                icon: "/favicon.svg"
+                                                            });
+                                                        } else if (Notification.permission !== "denied") {
+                                                            const permission = await Notification.requestPermission();
+                                                            if (permission === "granted") {
+                                                                new Notification("Test Notification", {
+                                                                    body: "Permission granted! Notifications will now work.",
+                                                                    icon: "/favicon.svg"
+                                                                });
+                                                            } else {
+                                                                alert("Permission was denied. You need to enable notifications in your browser settings for this site.");
+                                                            }
+                                                        } else {
+                                                            alert("Notifications are blocked by your browser settings. Please enable them manually for this site.");
+                                                        }
+                                                    }}
+                                                    className="text-xs text-white/50 hover:text-white underline underline-offset-2"
+                                                >
+                                                    Send Test Notification
+                                                </button>
+                                            </div>
+                                        )}
+                                    </section>
+                                </>
+                            )}
+
+                            {activeTab === "appearance" && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2 text-white/80 font-medium pb-2 border-b border-white/5">
+                                        <Palette className="w-4 h-4" />
+                                        <h3>Visual Theme</h3>
+                                    </div>
+                                    <ThemeSelector />
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}

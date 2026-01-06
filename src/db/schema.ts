@@ -1,5 +1,5 @@
 
-import { pgTable, serial, text, boolean, timestamp, integer, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, uuid, jsonb } from "drizzle-orm/pg-core";
 
 // --- Allowed Users (Admin Panel) ---
 export const allowedUsers = pgTable("allowed_users", {
@@ -20,6 +20,8 @@ export const appUsers = pgTable("app_users", {
     spotifyUserId: text("spotify_user_id"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
+    // Store user preferences as a JSON object (theme, etc.)
+    preferences: jsonb("preferences"),
 });
 
 // --- Spotify Accounts ---

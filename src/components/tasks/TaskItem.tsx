@@ -42,7 +42,7 @@ export function TaskItem({ task, isActive, onToggle, onDelete, onSelect }: TaskI
                 className={cx(
                     "flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors",
                     task.isComplete
-                        ? "bg-emerald-500 border-emerald-500 text-black"
+                        ? "bg-[var(--accent-primary)] border-[var(--accent-primary)] text-black"
                         : "border-white/30 hover:border-white/50"
                 )}
             >

@@ -40,6 +40,11 @@ export default function Home() {
     // Audio
     const { play: playChime } = useChime("/sounds/chime_1.mp3", settings.sound.volume);
 
+    // Global Progress Calculation
+    const totalEst = tasks.reduce((acc, t) => acc + t.estimatedPomodoros, 0);
+    const totalDone = tasks.reduce((acc, t) => acc + t.completedPomodoros, 0);
+    const workDuration = settings.durations.work * 60;
+
     // Timer Logic
     const timerState = usePomodoroTimer({
         settings,
@@ -49,15 +54,40 @@ export default function Home() {
                 playChime();
             }
 
-            // Increment task & Check for completion celebration
+            // Increment task
             if (prev === "study" && activeTaskId) {
-                const justFinishedTask = incrementTaskPomodoro(activeTaskId);
-                if (justFinishedTask) {
+                incrementTaskPomodoro(activeTaskId);
+            }
+
+            // Celebration Logic
+            if (prev === "study") {
+                if (tasks.length > 0) {
+                    // Celebrate only if ALL tasks are effectively done
+                    // Check if (totalDone + 1) >= totalEst
+                    if ((totalDone + 1) >= totalEst) {
+                        setShowCelebration(true);
+                    }
+                } else {
+                    // No tasks: Celebration every session (classic mode)
                     setShowCelebration(true);
                 }
             }
         }
     });
+
+    // Global Progress Calculation (Depends on timerState)
+    let globalProgress: number | null = null;
+    if (tasks.length > 0 && totalEst > 0) {
+        const workDuration = settings.durations.work * 60;
+        // Current session progress (only if in study mode)
+        // We cap partial progress at 1 unit to avoid over-crediting
+        const currentSessionRatio = (timerState.phaseKind === "study")
+            ? Math.max(0, 1 - timerState.secondsLeft / workDuration)
+            : 0;
+
+        // Formula: (Total Finished Units + Current Partial Unit) / Total Estimated Units
+        globalProgress = Math.min(100, ((totalDone + currentSessionRatio) / totalEst) * 100);
+    }
 
     // Persistence
     const { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause } = timerState;
@@ -94,9 +124,10 @@ export default function Home() {
                     timer={timerState}
                     settings={settings}
                     updateSettings={updateSettings}
+                    globalProgress={globalProgress}
                 />
 
-                <div className="absolute bottom-10 w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                <div className="w-full max-w-lg mt-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
                     <TaskList
                         tasks={tasks}
                         activeTaskId={activeTaskId}

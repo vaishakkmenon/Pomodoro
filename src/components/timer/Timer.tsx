@@ -32,9 +32,10 @@ interface TimerProps {
     settings: Settings;
     updateSettings: (s: Partial<Settings>) => void;
     primeAudio?: () => void;
+    globalProgress?: number | null;
 }
 
-export default function Timer({ timer, settings, updateSettings, primeAudio = () => { } }: TimerProps) {
+export default function Timer({ timer, settings, updateSettings, primeAudio = () => { }, globalProgress = null }: TimerProps) {
     const [settingsOpen, setSettingsOpen] = useState(false);
 
     // Request notification permission if enabled in settings
@@ -114,8 +115,8 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
     const chipAccent = isDone
         ? "text-white/80 ring-white/20"
         : phaseForAccent === "focus"
-            ? "text-emerald-200 ring-emerald-400/40"
-            : "text-sky-200 ring-sky-400/40";
+            ? "text-[var(--accent-primary)] ring-[var(--accent-primary)]/40"
+            : "text-[var(--accent-break)] ring-[var(--accent-break)]/40";
 
     // Derived values for ProgressBar
     const currentDuration = settings.durations
@@ -124,8 +125,22 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
                 : settings.durations.longBreak) * 60
         : 25 * 60; // fallback
 
-    // Functions for keyboard nav omitted for brevity, but they need to exist if referenced. 
-    // I will include them to avoid breaking.
+    // Logic: If globalProgress is provided (tasks exist), use it.
+    // Otherwise fallback to session progress (secondsLeft / currentDuration).
+    // Note: ProgressBar expects explicit values or we can create a specialized prop.
+    // To minimize changes to ProgressBar, we'll calculate effectively.
+
+    // BUT ProgressBar component takes (secondsLeft, totalDuration). 
+    // We can trick it or simpler: Let's calculate percentage here and pass it.
+    // Actually, ProgressBar component creates percentage internally.
+    // Let's modify ProgressBar to take optional `forcePercentage`.
+    // OR simpler: just pass derived values that result in the correct %.
+    // If globalProgress = 50%, passing secondsLeft=50, totalDuration=100 works.
+
+    const progressProps = globalProgress !== null
+        ? { secondsLeft: 100 - globalProgress, totalDuration: 100 }
+        : { secondsLeft: secondsLeft, totalDuration: currentDuration };
+
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
         if (!menuOpen) return;
         // implementation...
@@ -207,8 +222,8 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
             {/* Integrated Progress Bar - Floating above */}
             <div className={cx("w-full transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none", cardMax)}>
                 <ProgressBar
-                    secondsLeft={secondsLeft}
-                    totalDuration={currentDuration}
+                    secondsLeft={progressProps.secondsLeft}
+                    totalDuration={progressProps.totalDuration}
                     phase={phaseForAccent}
                 />
             </div>
