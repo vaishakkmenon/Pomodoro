@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import { cx } from "@/ui/cx";
 import Timer from "@/components/timer/Timer";
 import { SpotifyErrorHandler } from "@/components/spotify/SpotifyErrorHandler";
 import { UserMenu } from "@/components/auth/UserMenu";
@@ -54,11 +55,27 @@ export default function Home() {
         PERSIST_KEY
     );
 
+    // Media State
+    const [isMediaWide, setIsMediaWide] = useState(false);
+    const [isMediaOpen, setIsMediaOpen] = useState(false);
+
     return (
         <>
-            <MediaDock settings={settings} updateSettings={updateSettings} />
+            <MediaDock
+                settings={settings}
+                updateSettings={updateSettings}
+                isWide={isMediaWide}
+                onToggleWide={() => setIsMediaWide(!isMediaWide)}
+                isOpen={isMediaOpen}
+                onOpenChange={setIsMediaOpen}
+            />
 
-            <main className="min-h-screen relative flex flex-col items-center justify-center py-10 text-white">
+            <main
+                className={cx(
+                    "min-h-screen relative flex flex-col items-center justify-center py-10 text-white transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                    isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[975px]" : "pl-0"
+                )}
+            >
                 {/* Header / Top Right Auth */}
                 <div className="absolute top-4 right-4 z-50">
                     <UserMenu />

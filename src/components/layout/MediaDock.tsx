@@ -4,25 +4,31 @@ import { cx } from "@/ui/cx";
 import { ChevronRight, ChevronLeft, Youtube, Maximize2, Minimize2, X } from "lucide-react";
 import { YouTubePlayer } from "@/components/media/YouTubePlayer";
 import { SpotifyPlaceholder } from "@/components/media/SpotifyPlaceholder";
-
+import { Settings } from "@/types/settings";
 
 type Tab = "spotify" | "youtube";
-
-import { Settings } from "@/types/settings";
 
 interface MediaDockProps {
     settings: Settings;
     updateSettings: (s: Partial<Settings>) => void;
+    isWide: boolean;
+    onToggleWide: () => void;
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
 }
 
-export function MediaDock({ settings, updateSettings }: MediaDockProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isWide, setIsWide] = useState(false);
+export function MediaDock({
+    settings,
+    updateSettings,
+    isWide,
+    onToggleWide,
+    isOpen,
+    onOpenChange
+}: MediaDockProps) {
     const [activeTab, setActiveTab] = useState<Tab>("youtube");
 
 
-
-    const toggleOpen = () => setIsOpen(!isOpen);
+    const toggleOpen = () => onOpenChange(!isOpen);
 
     const closeDock = () => {
         updateSettings({ media: { ...settings.media, enabled: false } });
@@ -30,15 +36,15 @@ export function MediaDock({ settings, updateSettings }: MediaDockProps) {
 
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
-        if (tab === "spotify") {
-            setIsWide(false); // Spotify doesn't support wide/theater mode
+        if (tab === "spotify" && isWide) {
+            onToggleWide(); // Spotify doesn't support wide/theater mode
         }
-        if (!isOpen) setIsOpen(true);
+        if (!isOpen) onOpenChange(true);
     };
 
     const toggleTheaterMode = () => {
         if (activeTab === "youtube") {
-            setIsWide(!isWide);
+            onToggleWide();
         }
     };
 
@@ -49,8 +55,8 @@ export function MediaDock({ settings, updateSettings }: MediaDockProps) {
                     initial={{ opacity: 0, width: 60, height: 300 }}
                     animate={{
                         opacity: 1,
-                        width: !isOpen ? 60 : isWide ? 800 : 450,
-                        height: !isOpen ? 300 : 500,
+                        width: !isOpen ? 60 : isWide ? 950 : 450,
+                        height: !isOpen ? 300 : isWide ? 700 : 500,
                     }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
