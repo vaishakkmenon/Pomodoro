@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Settings } from "@/types/settings";
-import { X, Volume2, VolumeX, Bell, BellOff, Clock, Zap } from "lucide-react";
+import { X, Volume2, VolumeX, Bell, BellOff, Clock, Zap, Music } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cx } from "@/ui/cx";
 
@@ -60,6 +60,12 @@ export function SettingsModal({
         const newNotifs = { ...localSettings.notifications, enabled };
         setLocalSettings({ ...localSettings, notifications: newNotifs });
         onUpdateSettings({ notifications: newNotifs });
+    };
+
+    const updateMedia = (enabled: boolean) => {
+        const newMedia = { ...localSettings.media, enabled };
+        setLocalSettings({ ...localSettings, media: newMedia });
+        onUpdateSettings({ media: newMedia });
     };
 
     return (
@@ -137,6 +143,13 @@ export function SettingsModal({
                                     <h3>Behavior</h3>
                                 </div>
                                 <div className="flex items-center justify-between">
+                                    <label className="text-sm text-white/60">Auto-start Timer</label>
+                                    <Toggle
+                                        checked={localSettings.autoStart}
+                                        onChange={(checked) => updateBehavior("autoStart", checked)}
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between">
                                     <label className="text-sm text-white/60">Long Break Interval</label>
                                     <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
                                         <input
@@ -183,6 +196,19 @@ export function SettingsModal({
                                             {Math.round(localSettings.sound.volume * 100)}%
                                         </span>
                                     </div>
+                                </div>
+                            </section>
+
+                            <section className="pt-4 border-t border-white/5">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-white/80 font-medium">
+                                        <Music className="w-4 h-4" />
+                                        <h3>Media Dock</h3>
+                                    </div>
+                                    <Toggle
+                                        checked={localSettings.media?.enabled ?? true}
+                                        onChange={(checked) => updateMedia(checked)}
+                                    />
                                 </div>
                             </section>
 

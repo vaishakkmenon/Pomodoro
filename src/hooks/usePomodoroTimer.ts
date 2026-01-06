@@ -112,6 +112,13 @@ export function usePomodoroTimer(opts: Options = {}) {
                     chimePlayer.play(settings.sound.volume);
                 }
 
+                const shouldAutoStart = settings?.autoStart ?? false;
+                if (!shouldAutoStart) {
+                    setIsRunning(false);
+                    // Sync: Pause music if not auto-starting
+                    syncRef.current?.("PAUSED");
+                }
+
                 if (prevTab === "study") {
                     completedStudies.current += 1;
                     const isLong = completedStudies.current % longEvery === 0;
@@ -123,12 +130,16 @@ export function usePomodoroTimer(opts: Options = {}) {
                     // But for this tick, we are done.
 
                     // Sync: Switch to Break music
-                    syncRef.current?.("BREAK");
+                    if (shouldAutoStart) {
+                        syncRef.current?.("BREAK");
+                    }
                 } else {
                     setTab("study");
                     setSecondsLeft(durationMap["study"]);
                     // Sync: Switch to Focus music
-                    syncRef.current?.("FOCUS");
+                    if (shouldAutoStart) {
+                        syncRef.current?.("FOCUS");
+                    }
                 }
                 onComplete?.(prevTab);
             } else {

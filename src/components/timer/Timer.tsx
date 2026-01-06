@@ -4,30 +4,37 @@
 import { useEffect, useRef, useState } from "react";
 import type { Phase } from "@/ui/types";
 import { cx } from "@/ui/cx";
-import { useChime } from "@/hooks/useChime";
+
 import { TABS, LABELS, CATCHUP_MIN_SECONDS, CATCHUP_MAX_SECONDS } from "@/config/timer";
-import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
 import SidebarTabs from "@/components/timer/SidebarTabs";
 import TimeDisplay from "@/components/timer/TimeDisplay";
 import TimerControls from "@/components/timer/TimerControls";
 import CatchupToast from "@/components/timer/CatchupToast";
-import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
 import { safeParseJSON } from "@/lib/json";
-import { isValidCatchupState, type CatchupCheckState } from "@/types/timer";
+import { isValidCatchupState, type CatchupCheckState, type TimerState } from "@/types/timer";
+import { PERSIST_KEY } from "@/hooks/usePersistence";
 
 import { MusicSettings } from "@/components/spotify/MusicSettings";
-import { SpotifyConnect } from "@/components/spotify/SpotifyConnect";
+
 import { useSpotifySync } from "@/hooks/useSpotifySync";
 import { useSiteAuth } from "@/hooks/useSiteAuth";
 
 // Settings Integration
 import { Settings as SettingsIcon } from "lucide-react";
-import { useSettings } from "@/hooks/useSettings";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { requestNotificationPermission } from "@/lib/notifications";
+import { Settings } from "@/types/settings";
+// import { DURATIONS } from "@/config/timer";
+import { ProgressBar } from "./ProgressBar";
 
-export default function Timer() {
-    const { settings, updateSettings } = useSettings();
+interface TimerProps {
+    timer: TimerState;
+    settings: Settings;
+    updateSettings: (s: Partial<Settings>) => void;
+    primeAudio?: () => void;
+}
+
+export default function Timer({ timer, settings, updateSettings, primeAudio = () => { } }: TimerProps) {
     const [settingsOpen, setSettingsOpen] = useState(false);
 
     // Request notification permission if enabled in settings
@@ -37,18 +44,12 @@ export default function Timer() {
         }
     }, [settings.notifications.enabled]);
 
-    // Chime only when a study session completes
-    const { play: playChime, prime: primeAudio } = useChime("/sounds/chime_1.mp3", settings.sound.volume);
-
     const {
-        tab, secondsLeft, isRunning, completedStudies,
+        tab, secondsLeft, isRunning,
         start, pause, reset, switchTab, setSeconds,
         atFull, isDone, phaseKind,
         applyCatchup, setSyncCallback,
-    } = usePomodoroTimer({
-        settings, // Pass settings to timer logic
-        onComplete: (prev) => prev === "study" && settings.sound.enabled && playChime()
-    });
+    } = timer;
 
     // --- Auth & Spotify Integration ---
     const { isPremium } = useSiteAuth();
@@ -57,11 +58,6 @@ export default function Timer() {
     useEffect(() => {
         setSyncCallback(syncPlayback);
     }, [setSyncCallback, syncPlayback]);
-
-    usePersistence(
-        { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause },
-        PERSIST_KEY
-    );
 
     const [menuOpen, setMenuOpen] = useState(false);
     // Spotify menu toggle
@@ -72,6 +68,7 @@ export default function Timer() {
     const catchupSavedAtRef = useRef<number | null>(null);
 
     useEffect(() => {
+        // Can we read localStorage here? Yes.
         const raw = localStorage.getItem(PERSIST_KEY);
         const s = safeParseJSON<CatchupCheckState>(raw, isValidCatchupState);
         if (!s?.running) return;
@@ -120,16 +117,23 @@ export default function Timer() {
             ? "text-emerald-200 ring-emerald-400/40"
             : "text-sky-200 ring-sky-400/40";
 
-    // ----- Keyboard navigation (omitted/unchanged details) -----
-    // Re-implementing unchanged helper functions to keep context valid within replacement
+    // Derived values for ProgressBar
+    const currentDuration = settings.durations
+        ? (tab === "study" ? settings.durations.work
+            : tab === "short" ? settings.durations.shortBreak
+                : settings.durations.longBreak) * 60
+        : 25 * 60; // fallback
+
+    // Functions for keyboard nav omitted for brevity, but they need to exist if referenced. 
+    // I will include them to avoid breaking.
     function onTabsKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
         if (!menuOpen) return;
+        // implementation...
+        // Reuse existing logic
         const target = e.target as HTMLElement;
         if (target.getAttribute("role") !== "tab") return;
-
         const last = TABS.length - 1;
         let next = focusIdx;
-
         switch (e.key) {
             case "ArrowDown":
                 if (focusIdx === last) {
@@ -153,18 +157,10 @@ export default function Timer() {
                 next = focusIdx - 1;
                 e.preventDefault();
                 break;
-            case "Home":
-                next = 0;
-                e.preventDefault();
-                break;
-            case "End":
-                next = last;
-                e.preventDefault();
-                break;
-            default:
-                return;
+            case "Home": next = 0; e.preventDefault(); break;
+            case "End": next = last; e.preventDefault(); break;
+            default: return;
         }
-
         setFocusIdx(next);
         tabRefs.current[next]?.focus();
     }
@@ -172,16 +168,13 @@ export default function Timer() {
     function onPanelKeyDown(e: React.KeyboardEvent<HTMLElement>) {
         const t = e.target as HTMLElement;
         const last = TABS.length - 1;
-
         if (e.key === "ArrowDown") {
             if (t === startBtnRef.current) {
                 if (!resetDisabled) resetBtnRef.current?.focus();
                 else if (menuOpen) { setFocusIdx(0); tabRefs.current[0]?.focus(); }
                 e.preventDefault();
             } else if (t === resetBtnRef.current && menuOpen) {
-                setFocusIdx(0);
-                tabRefs.current[0]?.focus();
-                e.preventDefault();
+                setFocusIdx(0); tabRefs.current[0]?.focus(); e.preventDefault();
             }
         } else if (e.key === "ArrowUp") {
             if (t === resetBtnRef.current) {
@@ -189,9 +182,7 @@ export default function Timer() {
                 else if (menuOpen) { setFocusIdx(last); tabRefs.current[last]?.focus(); }
                 e.preventDefault();
             } else if (t === startBtnRef.current && menuOpen) {
-                setFocusIdx(last);
-                tabRefs.current[last]?.focus();
-                e.preventDefault();
+                setFocusIdx(last); tabRefs.current[last]?.focus(); e.preventDefault();
             }
         }
     }
@@ -206,23 +197,30 @@ export default function Timer() {
                 tabRefs.current[idx]?.focus();
             } else {
                 const active = document.activeElement as HTMLElement | null;
-                if (active?.getAttribute("role") === "tab") {
-                    startBtnRef.current?.focus();
-                }
+                if (active?.getAttribute("role") === "tab") startBtnRef.current?.focus();
             }
         });
     }
 
     return (
         <div className="flex flex-col gap-4 items-center w-full">
+            {/* Integrated Progress Bar - Floating above */}
+            <div className={cx("w-full transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none", cardMax)}>
+                <ProgressBar
+                    secondsLeft={secondsLeft}
+                    totalDuration={currentDuration}
+                    phase={phaseForAccent}
+                />
+            </div>
+
             <div
                 className={cx(
-                    "w-full rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur",
+                    "relative w-full rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur",
                     "transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none",
                     cardMax
                 )}
             >
-                {/* Header with hamburger and Spotify */}
+                {/* Header */}
                 <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button
@@ -231,7 +229,7 @@ export default function Timer() {
                             aria-expanded={menuOpen}
                             aria-controls="sidebar-tabs"
                             className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
-                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                             title={menuOpen ? "Hide session tabs" : "Show session tabs"}
                         >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -247,7 +245,7 @@ export default function Timer() {
                         type="button"
                         onClick={() => setSettingsOpen(true)}
                         className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
-                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                         title="Open Settings"
                     >
                         <SettingsIcon className="w-5 h-5 text-white/70" />
@@ -275,7 +273,6 @@ export default function Timer() {
                         onKeyDown={onPanelKeyDown}
                     >
                         <div className="flex flex-col items-center -mt-1 md:-mt-8 gap-4 mb-6">
-                            {/* Status chip */}
                             <div
                                 aria-live="polite"
                                 className={cx(
@@ -287,7 +284,6 @@ export default function Timer() {
                                 {chipText}
                             </div>
 
-                            {/* Time display */}
                             <div className="text-8xl font-bold tabular-nums leading-none">
                                 <TimeDisplay
                                     secondsLeft={secondsLeft}
@@ -310,7 +306,7 @@ export default function Timer() {
                             resetBtnRef={resetBtnRef}
                         />
 
-                        {/* Spotify Settings Toggle (Only if authenticated AND premium) */}
+                        {/* Spotify Settings Toggle */}
                         {isPremium && isAuthenticated && (
                             <div className="mt-6 flex justify-center">
                                 <button
@@ -335,13 +331,9 @@ export default function Timer() {
             </div>
 
             {/* Spotify Connect Pill */}
-            {isPremium && (
-                <div className="w-full flex justify-center">
-                    <SpotifyConnect />
-                </div>
-            )}
 
-            {/* Spotify Settings Panel (External or integrated) */}
+
+            {/* Spotify Settings Panel */}
             {spotifyOpen && isPremium && isAuthenticated && (
                 <div className="w-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden animate-in slide-in-from-top-2 fade-in duration-300">
                     <MusicSettings />

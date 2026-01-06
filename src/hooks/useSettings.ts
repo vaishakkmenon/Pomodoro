@@ -29,6 +29,10 @@ export function useSettings() {
                         ...DEFAULT_SETTINGS.notifications,
                         ...(parsed.notifications || {}),
                     },
+                    media: {
+                        ...DEFAULT_SETTINGS.media,
+                        ...(parsed.media || {}),
+                    },
                 };
                 setSettings(merged);
             } catch (error) {

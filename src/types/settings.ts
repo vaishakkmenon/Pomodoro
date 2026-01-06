@@ -4,13 +4,16 @@ export interface Settings {
         shortBreak: number;
         longBreak: number;
     };
-    autoStart?: boolean;
+    autoStart: boolean;
     longBreakInterval: number;
     sound: {
         volume: number;
         enabled: boolean;
     };
     notifications: {
+        enabled: boolean;
+    };
+    media: {
         enabled: boolean;
     };
 }

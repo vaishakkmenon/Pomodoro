@@ -50,3 +50,21 @@ export function isValidCatchupState(x: unknown): x is CatchupCheckState {
     const obj = x as Record<string, unknown>;
     return typeof obj.running === "boolean" && typeof obj.savedAt === "number";
 }
+
+export interface TimerState {
+    tab: Tab;
+    secondsLeft: number;
+    isRunning: boolean;
+    completedStudies: number;
+    start: () => void;
+    pause: () => void;
+    reset: () => void;
+    switchTab: (t: Tab) => void;
+    setSeconds: (n: number) => void;
+    atFull: boolean;
+    isDone: boolean;
+    phaseKind: "study" | "break";
+    statusText: string;
+    applyCatchup: (elapsed: number) => void;
+    setSyncCallback: (cb: ((state: "FOCUS" | "BREAK" | "PAUSED") => void) | null) => void;
+}
