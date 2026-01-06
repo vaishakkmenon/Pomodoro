@@ -48,7 +48,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
     };
 
     return (
-        <div className="w-full max-w-md mx-auto mt-8">
+        <div className="w-full max-w-[min(90vw,28rem)] mx-auto mt-8">
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full flex items-center justify-between mb-2 group text-white/80 hover:text-white transition-colors"

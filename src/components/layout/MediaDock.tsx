@@ -55,8 +55,8 @@ export function MediaDock({
                     initial={{ opacity: 0, width: 60, height: 225 }}
                     animate={{
                         opacity: 1,
-                        width: !isOpen ? 60 : isWide ? 950 : 450,
-                        height: !isOpen ? 225 : isWide ? 700 : 500,
+                        width: !isOpen ? 60 : isWide ? "60vw" : "30vw",
+                        height: !isOpen ? 225 : isWide ? "70vh" : "50vh",
                     }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}

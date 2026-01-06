@@ -109,7 +109,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
     const chipText = `${LABELS[tab]}${isDone ? " — Finished" : isRunning ? "" : " — Paused"}`;
     const startDisabled = isDone && !isRunning;
     const resetDisabled = atFull;
-    const cardMax = menuOpen ? "max-w-xl" : "max-w-lg";
+    const cardMax = menuOpen ? "max-w-[min(90vw,36rem)]" : "max-w-[min(90vw,32rem)]";
 
     const chipAccent = isDone
         ? "text-white/80 ring-white/20"
