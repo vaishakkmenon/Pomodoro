@@ -20,7 +20,15 @@ export function useTasks() {
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                // Basic validation could be added here
+
+                // Auto-select first incomplete task if none is active
+                if (!parsed.activeTaskId && parsed.tasks.length > 0) {
+                    const firstIncomplete = parsed.tasks.find((t: Task) => !t.isComplete);
+                    if (firstIncomplete) {
+                        parsed.activeTaskId = firstIncomplete.id;
+                    }
+                }
+
                 setState(parsed);
             } catch (error) {
                 console.error("Failed to parse tasks:", error);
@@ -53,10 +61,18 @@ export function useTasks() {
 
     const deleteTask = useCallback((id: string) => {
         const newTasks = state.tasks.filter((t) => t.id !== id);
+
+        // If we deleted the active task, auto-select the next incomplete one
+        let newActiveId = state.activeTaskId;
+        if (state.activeTaskId === id) {
+            const nextTask = newTasks.find(t => !t.isComplete);
+            newActiveId = nextTask ? nextTask.id : null;
+        }
+
         updateState({
             ...state,
             tasks: newTasks,
-            activeTaskId: state.activeTaskId === id ? null : state.activeTaskId,
+            activeTaskId: newActiveId,
         });
     }, [state, updateState]);
 
@@ -68,10 +84,25 @@ export function useTasks() {
     }, [state, updateState]);
 
     const incrementTaskPomodoro = useCallback((id: string) => {
-        const newTasks = state.tasks.map((t) =>
-            t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t
-        );
+        let justCompleted = false;
+        const newTasks = state.tasks.map((t) => {
+            if (t.id === id) {
+                const newCompleted = t.completedPomodoros + 1;
+                // Auto-complete if goal reached (and wasn't already complete)
+                const goalReached = newCompleted >= t.estimatedPomodoros;
+                if (goalReached && !t.isComplete) {
+                    justCompleted = true;
+                }
+                return {
+                    ...t,
+                    completedPomodoros: newCompleted,
+                    isComplete: t.isComplete || goalReached
+                };
+            }
+            return t;
+        });
         updateState({ ...state, tasks: newTasks });
+        return justCompleted;
     }, [state, updateState]);
 
     const setActiveTask = useCallback((id: string | null) => {

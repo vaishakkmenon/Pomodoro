@@ -5,18 +5,21 @@ import type { SpotifySession } from "@/types/spotify";
 import { useSiteAuth } from "@/hooks/useSiteAuth";
 
 export function useSpotifyAuth() {
-    const [session, setSession] = useState<SpotifySession | null>(null);
+    const [session] = useState<SpotifySession | null>(null);
+    // const [_setSession] = useState<SpotifySession | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { user: siteUser } = useSiteAuth();
 
     // Check session on mount and when site user changes
     useEffect(() => {
-        setIsLoading(true);
-        fetch("/api/spotify/session", { credentials: "include" })
-            .then((r) => r.json())
-            .then((data) => setSession(data))
-            .catch(() => setSession({ authenticated: false, user: null }))
-            .finally(() => setIsLoading(false));
+        // TEMPORARILY DISABLED
+        // setIsLoading(true);
+        // fetch("/api/spotify/session", { credentials: "include" })
+        //     .then((r) => r.json())
+        //     .then((data) => setSession(data))
+        //     .catch(() => setSession({ authenticated: false, user: null }))
+        //     .finally(() => setIsLoading(false));
+        setIsLoading(false);
     }, [siteUser?.id]);
 
     const login = useCallback(() => {

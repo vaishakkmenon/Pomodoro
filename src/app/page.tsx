@@ -6,7 +6,7 @@ import Timer from "@/components/timer/Timer";
 import { SpotifyErrorHandler } from "@/components/spotify/SpotifyErrorHandler";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { MediaDock } from "@/components/layout/MediaDock";
-
+import { Celebration } from "@/components/ui/Celebration";
 
 import { useTasks } from "@/hooks/useTasks";
 import { TaskList } from "@/components/tasks/TaskList";
@@ -30,6 +30,13 @@ export default function Home() {
         incrementTaskPomodoro
     } = useTasks();
 
+
+
+    // Media State
+    const [isMediaWide, setIsMediaWide] = useState(false);
+    const [isMediaOpen, setIsMediaOpen] = useState(false);
+    const [showCelebration, setShowCelebration] = useState(false);
+
     // Audio
     const { play: playChime } = useChime("/sounds/chime_1.mp3", settings.sound.volume);
 
@@ -41,9 +48,13 @@ export default function Home() {
             if (prev === "study" && settings.sound.enabled) {
                 playChime();
             }
-            // Increment task
+
+            // Increment task & Check for completion celebration
             if (prev === "study" && activeTaskId) {
-                incrementTaskPomodoro(activeTaskId);
+                const justFinishedTask = incrementTaskPomodoro(activeTaskId);
+                if (justFinishedTask) {
+                    setShowCelebration(true);
+                }
             }
         }
     });
@@ -55,10 +66,6 @@ export default function Home() {
         PERSIST_KEY
     );
 
-    // Media State
-    const [isMediaWide, setIsMediaWide] = useState(false);
-    const [isMediaOpen, setIsMediaOpen] = useState(false);
-
     return (
         <>
             <MediaDock
@@ -68,6 +75,11 @@ export default function Home() {
                 onToggleWide={() => setIsMediaWide(!isMediaWide)}
                 isOpen={isMediaOpen}
                 onOpenChange={setIsMediaOpen}
+            />
+
+            <Celebration
+                show={showCelebration}
+                onDismiss={() => setShowCelebration(false)}
             />
 
             <main

@@ -1,19 +1,25 @@
 "use client";
 
 import { useSpotifyAuth } from "@/hooks/useSpotifyAuth";
-import { useSiteAuth } from "@/hooks/useSiteAuth";
+// import { useSiteAuth } from "@/hooks/useSiteAuth";
 
 export function SpotifyConnect() {
     const { isAuthenticated, isLoading, user, logout } = useSpotifyAuth();
-    const { user: siteUser } = useSiteAuth();
+    // const { user: _siteUser } = useSiteAuth();
 
     const handleConnect = () => {
+        // TEMPORARILY DISABLED
+        console.log("Spotify connection temporarily disabled");
+        return;
+
+        /*
         if (!siteUser?.id) {
             console.error("No site user - should not be able to click this button");
             return;
         }
         // Pass site user ID to edge function for verification and linking
         window.location.href = `/api/spotify/login?user_id=${siteUser.id}`;
+        */
     };
 
     if (isLoading) {

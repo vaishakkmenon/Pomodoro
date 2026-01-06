@@ -52,22 +52,22 @@ export function MediaDock({
         <AnimatePresence>
             {settings.media?.enabled && (
                 <motion.div
-                    initial={{ opacity: 0, width: 60, height: 300 }}
+                    initial={{ opacity: 0, width: 60, height: 225 }}
                     animate={{
                         opacity: 1,
                         width: !isOpen ? 60 : isWide ? 950 : 450,
-                        height: !isOpen ? 300 : isWide ? 700 : 500,
+                        height: !isOpen ? 225 : isWide ? 700 : 500,
                     }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="fixed left-4 top-1/2 -translate-y-1/2 z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex"
                 >
                     {/* Sidebar / Icons */}
-                    <div className="w-[60px] flex flex-col items-center pt-14 pb-6 gap-4 bg-white/5 border-r border-white/5 flex-shrink-0 z-10 h-full relative">
+                    <div className="w-[60px] flex flex-col items-center py-3 gap-2 bg-white/5 border-r border-white/5 flex-shrink-0 z-10 h-full relative">
                         {/* Close Button */}
                         <button
                             onClick={closeDock}
-                            className="absolute top-3 left-1/2 -translate-x-1/2 p-2 text-white/20 hover:text-white/80 hover:bg-white/10 rounded-lg transition-all"
+                            className="p-2 text-white/20 hover:text-white/80 hover:bg-white/10 rounded-lg transition-all"
                             title="Remove Dock"
                         >
                             <X className="w-4 h-4" />
@@ -79,8 +79,6 @@ export function MediaDock({
                         >
                             {isOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                         </button>
-
-                        <div className="w-8 h-px bg-white/10" />
 
                         <button
                             onClick={() => handleTabChange("spotify")}
@@ -99,6 +97,8 @@ export function MediaDock({
                                 />
                             )}
                         </button>
+
+                        <div className="w-8 h-px bg-white/10" />
 
                         <button
                             onClick={() => handleTabChange("youtube")}
