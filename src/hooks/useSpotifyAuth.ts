@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { SpotifySession } from "@/types/spotify";
-import { useSiteAuth } from "@/hooks/useSiteAuth";
+import { useUser } from "@clerk/nextjs";
 
 export function useSpotifyAuth() {
     const [session] = useState<SpotifySession | null>(null);
     // const [_setSession] = useState<SpotifySession | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { user: siteUser } = useSiteAuth();
+    const { user: siteUser } = useUser();
 
     // Check session on mount and when site user changes
     useEffect(() => {

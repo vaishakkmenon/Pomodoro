@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { cx } from "@/ui/cx";
 import Timer from "@/components/timer/Timer";
 import { SpotifyErrorHandler } from "@/components/spotify/SpotifyErrorHandler";
-import { UserMenu } from "@/components/auth/UserMenu";
+
 import { MediaDock } from "@/components/layout/MediaDock";
 import { Celebration } from "@/components/ui/Celebration";
 
@@ -88,10 +88,7 @@ export default function Home() {
                     isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[62vw]" : "pl-0"
                 )}
             >
-                {/* Header / Top Right Auth */}
-                <div className="absolute top-4 right-4 z-50">
-                    <UserMenu />
-                </div>
+
 
                 <Timer
                     timer={timerState}

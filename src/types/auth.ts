@@ -1,4 +1,7 @@
-import type { User } from "@supabase/supabase-js";
+export interface User {
+    id: string;
+    email?: string;
+}
 
 export interface SiteAuthState {
     user: User | null;

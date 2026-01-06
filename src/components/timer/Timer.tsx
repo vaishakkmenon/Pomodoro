@@ -17,7 +17,7 @@ import { PERSIST_KEY } from "@/hooks/usePersistence";
 import { MusicSettings } from "@/components/spotify/MusicSettings";
 
 import { useSpotifySync } from "@/hooks/useSpotifySync";
-import { useSiteAuth } from "@/hooks/useSiteAuth";
+import { usePremium } from "@/hooks/usePremium";
 
 // Settings Integration
 import { Settings as SettingsIcon } from "lucide-react";
@@ -52,7 +52,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
     } = timer;
 
     // --- Auth & Spotify Integration ---
-    const { isPremium } = useSiteAuth();
+    const { isPremium } = usePremium();
     const { syncPlayback, isAuthenticated } = useSpotifySync();
 
     useEffect(() => {
