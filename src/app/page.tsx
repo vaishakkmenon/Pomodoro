@@ -139,14 +139,6 @@ export default function Home() {
 
     return (
         <>
-            <MediaDock
-                settings={settings}
-                updateSettings={updateSettings}
-                isWide={isMediaWide}
-                onToggleWide={() => setIsMediaWide(!isMediaWide)}
-                isOpen={isMediaOpen}
-                onOpenChange={setIsMediaOpen}
-            />
 
             <Celebration
                 show={showCelebration}
@@ -155,18 +147,28 @@ export default function Home() {
 
             <main
                 className={cx(
-                    "min-h-screen w-screen overflow-x-hidden relative flex flex-col items-center justify-center py-10 text-[var(--text-primary)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
-                    isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[62vw]" : "pl-0"
+                    "min-h-screen w-screen relative flex flex-col items-center justify-center py-10 text-[var(--text-primary)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                    isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[65vw]" : "pl-0"
                 )}
             >
 
 
-                <Timer
-                    timer={timerState}
-                    settings={settings}
-                    updateSettings={updateSettings}
-                    globalProgress={globalProgress}
-                />
+                <div className="relative w-full max-w-[min(90vw,28rem)]">
+                    <MediaDock
+                        settings={settings}
+                        updateSettings={updateSettings}
+                        isWide={isMediaWide}
+                        onToggleWide={() => setIsMediaWide(!isMediaWide)}
+                        isOpen={isMediaOpen}
+                        onOpenChange={setIsMediaOpen}
+                    />
+                    <Timer
+                        timer={timerState}
+                        settings={settings}
+                        updateSettings={updateSettings}
+                        globalProgress={globalProgress}
+                    />
+                </div>
 
                 <div className="w-full max-w-lg mt-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
                     <TaskList

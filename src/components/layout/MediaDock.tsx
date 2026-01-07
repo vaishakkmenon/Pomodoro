@@ -55,15 +55,43 @@ export function MediaDock({
                     initial={{ opacity: 0, width: 60, height: 225 }}
                     animate={{
                         opacity: 1,
-                        width: !isOpen ? 60 : isWide ? "60vw" : "30vw",
-                        height: !isOpen ? 225 : isWide ? "70vh" : "50vh",
+                        width: !isOpen ? 60 : isWide ? "65vw" : "30vw",
+                        height: !isOpen ? 225 : isWide ? "80vh" : "50vh",
                     }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed left-4 top-1/2 -translate-y-1/2 z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex"
+                    className={cx(
+                        // Base layout
+                        "z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex",
+
+                        // Positioning Logic
+                        (isOpen && isWide)
+                            ? "fixed left-4 top-1/2 -translate-y-1/2" // Wide Mode: Fixed to viewport left
+                            : "fixed left-4 top-1/2 -translate-y-1/2 md:absolute md:left-auto md:right-full md:mr-6" // Normal (Open or Closed): Absolute anchored to Timer
+                    )}
                 >
+                    {/* Content Area */}
+                    <div className="flex-1 h-full relative min-w-0 overflow-hidden">
+                        {activeTab === "youtube" ? (
+                            <YouTubePlayer isWide={isWide} toggleTheaterMode={toggleTheaterMode} />
+                        ) : (
+                            <SpotifyPlaceholder />
+                        )}
+
+                        {/* Theater Mode Toggle (YouTube Only) */}
+                        {activeTab === "youtube" && (
+                            <button
+                                onClick={toggleTheaterMode}
+                                className="absolute top-4 right-4 p-2 text-white/50 hover:text-white bg-black/50 hover:bg-black/70 rounded-lg transition-colors z-50 backdrop-blur-sm"
+                                title={isWide ? "Exit Theater Mode" : "Theater Mode"}
+                            >
+                                {isWide ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                            </button>
+                        )}
+                    </div>
+
                     {/* Sidebar / Icons */}
-                    <div className="w-[60px] flex flex-col items-center py-3 gap-2 bg-white/5 border-r border-white/5 flex-shrink-0 z-10 h-full relative">
+                    <div className="w-[60px] flex flex-col items-center py-3 gap-2 bg-white/5 border-l border-white/5 flex-shrink-0 z-10 h-full relative">
                         {/* Close Button */}
                         <button
                             onClick={closeDock}
@@ -77,7 +105,7 @@ export function MediaDock({
                             onClick={toggleOpen}
                             className="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
                         >
-                            {isOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                            {isOpen ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
                         </button>
 
                         <button
@@ -115,28 +143,7 @@ export function MediaDock({
                                 />
                             )}
                         </button>
-                    </div>
-
-                    {/* Content Area */}
-                    <div className="flex-1 h-full relative">
-                        {activeTab === "youtube" ? (
-                            <YouTubePlayer isWide={isWide} toggleTheaterMode={toggleTheaterMode} />
-                        ) : (
-                            <SpotifyPlaceholder />
-                        )}
-
-                        {/* Theater Mode Toggle (YouTube Only) */}
-                        {activeTab === "youtube" && (
-                            <button
-                                onClick={toggleTheaterMode}
-                                className="absolute top-4 right-4 p-2 text-white/50 hover:text-white bg-black/50 hover:bg-black/70 rounded-lg transition-colors z-50 backdrop-blur-sm"
-                                title={isWide ? "Exit Theater Mode" : "Theater Mode"}
-                            >
-                                {isWide ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                            </button>
-                        )}
-                    </div>
-                </motion.div>
+                    </div>                </motion.div>
             )}
         </AnimatePresence>
     );
