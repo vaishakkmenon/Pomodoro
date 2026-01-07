@@ -217,6 +217,9 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
         });
     }
 
+    // Map Tab to PhaseKind for animation
+    const specificPhase = tab === "study" ? "study" : tab === "short" ? "shortBreak" : "longBreak";
+
     return (
         <div className="flex flex-col gap-4 items-center w-full">
             {/* Integrated Progress Bar - Floating above */}
@@ -225,15 +228,21 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
                     secondsLeft={progressProps.secondsLeft}
                     totalDuration={progressProps.totalDuration}
                     phase={phaseForAccent}
+                    isRunning={isRunning}
+                    phaseKind={specificPhase}
                 />
             </div>
 
             <div
                 className={cx(
-                    "relative w-full rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur",
-                    "transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none",
+                    "relative w-full rounded-2xl border backdrop-blur p-6",
+                    "transition-[max-width,background-color,border-color] duration-700 ease-in-out motion-reduce:transition-none",
                     cardMax
                 )}
+                style={{
+                    backgroundColor: "var(--bg-card-overlay)",
+                    borderColor: "var(--border-card-overlay)"
+                }}
             >
                 {/* Header */}
                 <div className="mb-4 flex items-center justify-between">
@@ -243,8 +252,8 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
                             onClick={toggleMenu}
                             aria-expanded={menuOpen}
                             aria-controls="sidebar-tabs"
-                            className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
-                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                            className="inline-flex items-center gap-2 rounded-md p-2 text-[var(--text-primary)] hover:bg-[var(--text-primary)]/10
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-primary)]/30"
                             title={menuOpen ? "Hide session tabs" : "Show session tabs"}
                         >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -259,11 +268,11 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
                     <button
                         type="button"
                         onClick={() => setSettingsOpen(true)}
-                        className="inline-flex items-center gap-2 rounded-md p-2 text-white hover:bg-white/10
-                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                        className="inline-flex items-center gap-2 rounded-md p-2 text-[var(--text-primary)] hover:bg-[var(--text-primary)]/10
+                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-primary)]/30"
                         title="Open Settings"
                     >
-                        <SettingsIcon className="w-5 h-5 text-white/70" />
+                        <SettingsIcon className="w-5 h-5 opacity-70" />
                         <span className="sr-only">Open Settings</span>
                     </button>
                 </div>
@@ -299,7 +308,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
                                 {chipText}
                             </div>
 
-                            <div className="text-8xl font-bold tabular-nums leading-none">
+                            <div className="text-8xl font-bold tabular-nums leading-none text-[var(--text-primary)]">
                                 <TimeDisplay
                                     secondsLeft={secondsLeft}
                                     onTimeChange={setSeconds}
@@ -326,7 +335,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
                             <div className="mt-6 flex justify-center">
                                 <button
                                     onClick={() => setSpotifyOpen(!spotifyOpen)}
-                                    className="text-sm text-white/50 hover:text-white transition-colors"
+                                    className="text-sm text-[var(--text-primary)]/50 hover:text-[var(--text-primary)] transition-colors"
                                 >
                                     {spotifyOpen ? "Hide Music Settings" : "Show Music Settings"}
                                 </button>

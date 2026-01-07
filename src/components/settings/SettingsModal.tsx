@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Settings } from "@/types/settings";
 import { X, Volume2, VolumeX, Bell, BellOff, Clock, Zap, Music, Palette } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -23,6 +23,7 @@ export function SettingsModal({
     // Local state for immediate feedback before saving or just controlling inputs
     const [localSettings, setLocalSettings] = useState<Settings>(settings);
     const [activeTab, setActiveTab] = useState<"general" | "appearance">("general");
+    const [inputInSeconds, setInputInSeconds] = useState(false);
 
     // Sync local state when prop changes
     useEffect(() => {
@@ -82,36 +83,36 @@ export function SettingsModal({
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        className="w-full max-w-md bg-[var(--bg-secondary)] border border-[var(--text-primary)]/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                     >
-                        <div className="flex items-center justify-between p-6 border-b border-white/5">
-                            <h2 className="text-xl font-bold text-white">Settings</h2>
+                        <div className="flex items-center justify-between p-6 border-b border-[var(--text-primary)]/5">
+                            <h2 className="text-xl font-bold text-[var(--text-primary)]">Settings</h2>
                             <button
                                 onClick={onClose}
-                                className="text-white/40 hover:text-white transition-colors"
+                                className="text-[var(--text-primary)]/40 hover:text-[var(--text-primary)] transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="flex border-b border-white/5">
+                        <div className="flex border-b border-[var(--text-primary)]/5">
                             <button
                                 onClick={() => setActiveTab("general")}
                                 className={cx(
                                     "flex-1 px-4 py-3 text-sm font-medium transition-colors relative",
-                                    activeTab === "general" ? "text-white" : "text-white/40 hover:text-white/70"
+                                    activeTab === "general" ? "text-[var(--text-primary)]" : "text-[var(--text-primary)]/40 hover:text-[var(--text-primary)]/70"
                                 )}
                             >
                                 General
                                 {activeTab === "general" && (
-                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent-primary)]" />
                                 )}
                             </button>
                             <button
                                 onClick={() => setActiveTab("appearance")}
                                 className={cx(
                                     "flex-1 px-4 py-3 text-sm font-medium transition-colors relative",
-                                    activeTab === "appearance" ? "text-white" : "text-white/40 hover:text-white/70"
+                                    activeTab === "appearance" ? "text-[var(--text-primary)]" : "text-[var(--text-primary)]/40 hover:text-[var(--text-primary)]/70"
                                 )}
                             >
                                 Appearance
@@ -126,79 +127,93 @@ export function SettingsModal({
                                 <>
                                     {/* Timer Durations */}
                                     <section className="space-y-4">
-                                        <div className="flex items-center gap-2 text-white/80 font-medium">
-                                            <Clock className="w-4 h-4" />
-                                            <h3>Timer Durations (minutes)</h3>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium">
+                                                <Clock className="w-4 h-4" />
+                                                <h3>Timer Durations</h3>
+                                            </div>
+                                            <button
+                                                onClick={() => setInputInSeconds(!inputInSeconds)}
+                                                className="text-xs text-[var(--accent-primary)] hover:opacity-80 transition-opacity"
+                                            >
+                                                {inputInSeconds ? "Switch to Minutes" : "Switch to Seconds"}
+                                            </button>
                                         </div>
                                         <div className="grid grid-cols-3 gap-4">
                                             <div className="space-y-2">
-                                                <label className="text-xs text-white/50">Focus</label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="120"
-                                                    value={localSettings.durations.work}
-                                                    onChange={(e) => updateDuration("work", Number(e.target.value))}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
+                                                <label className="text-xs text-[var(--text-primary)]/50">Focus ({inputInSeconds ? "sec" : "min"})</label>
+                                                <SmartNumberInput
+                                                    min={inputInSeconds ? 5 : 0.1}
+                                                    max={inputInSeconds ? 7200 : 120}
+                                                    step={inputInSeconds ? 1 : 0.5}
+                                                    value={inputInSeconds ? Math.round(localSettings.durations.work * 60) : localSettings.durations.work}
+                                                    onChange={(val) => {
+                                                        updateDuration("work", inputInSeconds ? val / 60 : val);
+                                                    }}
+                                                    className="w-full bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded-lg p-3 text-center text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/30 transition-all font-mono"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs text-white/50">Short Break</label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="60"
-                                                    value={localSettings.durations.shortBreak}
-                                                    onChange={(e) => updateDuration("shortBreak", Number(e.target.value))}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
+                                                <label className="text-xs text-[var(--text-primary)]/50">Short Break ({inputInSeconds ? "sec" : "min"})</label>
+                                                <SmartNumberInput
+                                                    min={inputInSeconds ? 5 : 0.1}
+                                                    max={inputInSeconds ? 3600 : 60}
+                                                    step={inputInSeconds ? 1 : 0.5}
+                                                    value={inputInSeconds ? Math.round(localSettings.durations.shortBreak * 60) : localSettings.durations.shortBreak}
+                                                    onChange={(val) => {
+                                                        updateDuration("shortBreak", inputInSeconds ? val / 60 : val);
+                                                    }}
+                                                    className="w-full bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded-lg p-3 text-center text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/30 transition-all font-mono"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs text-white/50">Long Break</label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="60"
-                                                    value={localSettings.durations.longBreak}
-                                                    onChange={(e) => updateDuration("longBreak", Number(e.target.value))}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-center text-white focus:outline-none focus:ring-1 focus:ring-white/30 transition-all font-mono"
+                                                <label className="text-xs text-[var(--text-primary)]/50">Long Break ({inputInSeconds ? "sec" : "min"})</label>
+                                                <SmartNumberInput
+                                                    min={inputInSeconds ? 5 : 0.1}
+                                                    max={inputInSeconds ? 3600 : 60}
+                                                    step={inputInSeconds ? 1 : 0.5}
+                                                    value={inputInSeconds ? Math.round(localSettings.durations.longBreak * 60) : localSettings.durations.longBreak}
+                                                    onChange={(val) => {
+                                                        updateDuration("longBreak", inputInSeconds ? val / 60 : val);
+                                                    }}
+                                                    className="w-full bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded-lg p-3 text-center text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/30 transition-all font-mono"
                                                 />
                                             </div>
                                         </div>
                                     </section>
 
                                     {/* Behavior */}
-                                    <section className="space-y-4 pt-4 border-t border-white/5">
-                                        <div className="flex items-center gap-2 text-white/80 font-medium">
+                                    <section className="space-y-4 pt-4 border-t border-[var(--text-primary)]/5">
+                                        <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium">
                                             <Zap className="w-4 h-4" />
                                             <h3>Behavior</h3>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <label className="text-sm text-white/60">Auto-start Timer</label>
+                                            <label className="text-sm text-[var(--text-primary)]/60">Auto-start Timer</label>
                                             <Toggle
                                                 checked={localSettings.autoStart}
                                                 onChange={(checked) => updateBehavior("autoStart", checked)}
                                             />
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <label className="text-sm text-white/60">Long Break Interval</label>
-                                            <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
+                                            <label className="text-sm text-[var(--text-primary)]/60">Long Break Interval</label>
+                                            <div className="flex items-center gap-3 bg-[var(--text-primary)]/5 rounded-lg p-1">
                                                 <input
                                                     type="number"
                                                     min="1"
                                                     max="10"
                                                     value={localSettings.longBreakInterval}
                                                     onChange={(e) => updateBehavior("longBreakInterval", Number(e.target.value))}
-                                                    className="w-16 bg-transparent text-center text-white border-none focus:outline-none font-mono"
+                                                    className="w-16 bg-transparent text-center text-[var(--text-primary)] border-none focus:outline-none font-mono"
                                                 />
                                             </div>
                                         </div>
                                     </section>
 
                                     {/* Sound */}
-                                    <section className="space-y-4 pt-4 border-t border-white/5">
+                                    <section className="space-y-4 pt-4 border-t border-[var(--text-primary)]/5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-white/80 font-medium">
+                                            <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium">
                                                 {localSettings.sound.enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                                                 <h3>Sound</h3>
                                             </div>
@@ -213,7 +228,7 @@ export function SettingsModal({
                                             localSettings.sound.enabled ? "opacity-100 max-h-20" : "opacity-30 max-h-0 pointer-events-none"
                                         )}>
                                             <div className="flex items-center gap-4">
-                                                <span className="text-xs text-white/50 w-12">Volume</span>
+                                                <span className="text-xs text-[var(--text-primary)]/50 w-12">Volume</span>
                                                 <input
                                                     type="range"
                                                     min="0"
@@ -221,18 +236,18 @@ export function SettingsModal({
                                                     step="0.05"
                                                     value={localSettings.sound.volume}
                                                     onChange={(e) => updateSound("volume", parseFloat(e.target.value))}
-                                                    className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                                    className="flex-1 h-1.5 bg-[var(--text-primary)]/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--text-primary)]"
                                                 />
-                                                <span className="text-xs text-white/50 w-8 text-right">
+                                                <span className="text-xs text-[var(--text-primary)]/50 w-8 text-right">
                                                     {Math.round(localSettings.sound.volume * 100)}%
                                                 </span>
                                             </div>
                                         </div>
                                     </section>
 
-                                    <section className="pt-4 border-t border-white/5">
+                                    <section className="pt-4 border-t border-[var(--text-primary)]/5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-white/80 font-medium">
+                                            <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium">
                                                 <Music className="w-4 h-4" />
                                                 <h3>Media Dock</h3>
                                             </div>
@@ -244,9 +259,9 @@ export function SettingsModal({
                                     </section>
 
                                     {/* Notifications */}
-                                    <section className="pt-4 border-t border-white/5">
+                                    <section className="pt-4 border-t border-[var(--text-primary)]/5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-white/80 font-medium">
+                                            <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium">
                                                 {localSettings.notifications.enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
                                                 <h3>Notifications</h3>
                                             </div>
@@ -283,7 +298,7 @@ export function SettingsModal({
                                                             alert("Notifications are blocked by your browser settings. Please enable them manually for this site.");
                                                         }
                                                     }}
-                                                    className="text-xs text-white/50 hover:text-white underline underline-offset-2"
+                                                    className="text-xs text-[var(--text-primary)]/50 hover:text-[var(--text-primary)] underline underline-offset-2"
                                                 >
                                                     Send Test Notification
                                                 </button>
@@ -295,7 +310,7 @@ export function SettingsModal({
 
                             {activeTab === "appearance" && (
                                 <div className="space-y-6">
-                                    <div className="flex items-center gap-2 text-white/80 font-medium pb-2 border-b border-white/5">
+                                    <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium pb-2 border-b border-[var(--text-primary)]/5">
                                         <Palette className="w-4 h-4" />
                                         <h3>Visual Theme</h3>
                                     </div>
@@ -306,7 +321,79 @@ export function SettingsModal({
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
+    );
+}
+
+// Helper for inputs that allows empty state while typing
+function SmartNumberInput({
+    value,
+    onChange,
+    min,
+    max,
+    step = 1,
+    className
+}: {
+    value: number;
+    onChange: (val: number) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+    className?: string;
+}) {
+    const [strVal, setStrVal] = useState(String(value));
+    const prevValueRef = useRef(value);
+
+    // Sync from parent ONLY if the parent value actually changed
+    useEffect(() => {
+        if (value !== prevValueRef.current) {
+            setStrVal(String(value));
+            prevValueRef.current = value;
+        }
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setStrVal(val);
+
+        // Don't push empty to parent regular reducer yet
+        if (val === "") return;
+
+        const num = parseFloat(val);
+        if (!isNaN(num)) {
+            // If min is set, don't push until >= min?
+            // Actually, pushing immediately is fine, but maybe inconsistent if min > 0.
+            // But let's keep it simple. If valid number, push it.
+            // Parent handles logic.
+            onChange(num);
+        }
+    };
+
+    const handleBlur = () => {
+        if (strVal === "" || isNaN(parseFloat(strVal))) {
+            setStrVal("0");
+            onChange(0);
+        } else {
+            // Optional: Format cleanly on blur (e.g. 5.0 -> 5)
+            // But only if it matches value
+            const parsed = parseFloat(strVal);
+            if (!isNaN(parsed)) {
+                setStrVal(String(parsed));
+            }
+        }
+    };
+
+    return (
+        <input
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={strVal}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            className={className}
+        />
     );
 }
 
@@ -318,18 +405,20 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (checked: b
             aria-checked={checked}
             onClick={() => onChange(!checked)}
             className={cx(
-                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75",
-                checked ? "bg-emerald-500" : "bg-white/10"
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-primary)]/75",
+                checked ? "bg-[var(--accent-primary)]" : "bg-[var(--text-primary)]/10"
             )}
         >
             <span className="sr-only">Use setting</span>
             <span
                 aria-hidden="true"
                 className={cx(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-[var(--text-primary)] shadow ring-0 transition duration-200 ease-in-out",
                     checked ? "translate-x-5" : "translate-x-0"
                 )}
             />
         </button>
     );
 }
+
+

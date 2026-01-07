@@ -1,4 +1,4 @@
-// eslint-disable-next-line react-refresh/only-export-components  
+
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -21,8 +21,18 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const isLight = (hex: string) => {
+    if (!hex) return false;
+    const c = hex.replace("#", "");
+    const r = parseInt(c.substring(0, 2), 16);
+    const g = parseInt(c.substring(2, 4), 16);
+    const b = parseInt(c.substring(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return false;
+    return ((r * 299 + g * 587 + b * 114) / 1000) > 155;
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const { user, isSignedIn } = useUser();
+    const { isSignedIn } = useUser();
     const [config, setConfig] = useState<ThemeConfig>(DEFAULT_THEME_CONFIG);
     const [mounted, setMounted] = useState(false);
 
@@ -32,6 +42,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
+
+                // Enforce contrast for custom themes
+                if (parsed.mode === "custom" && parsed.custom) {
+                    const isBgLight = isLight(parsed.custom.background);
+                    parsed.custom.foreground = isBgLight ? "#0f172a" : "#ffffff";
+
+                    // Add derived overlay colors directly to the config object if we want, 
+                    // or just handle it in applyTheme. For now, applyTheme handles it.
+                }
+
                 setConfig(parsed);
                 applyThemeFromConfig(parsed);
             } catch (e) {
@@ -50,7 +70,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const fetchServerPrefs = async () => {
             const serverPrefs = await getUserPreferences();
             if (serverPrefs) {
-                setConfig(serverPrefs as ThemeConfig);
+                const parsed = serverPrefs as ThemeConfig;
+                // Migrate legacy server themes too
+                if (parsed.mode === "custom" && parsed.custom && !parsed.custom.foreground) {
+                    parsed.custom.foreground = isLight(parsed.custom.background) ? "#0f172a" : "#ffffff";
+                }
+                setConfig(parsed);
             }
         };
         fetchServerPrefs();
@@ -68,7 +93,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // 2. Server persist (Debounced)
         if (isSignedIn) {
             const timer = setTimeout(() => {
-                updateUserPreferences(config);
+                updateUserPreferences(config as unknown as Record<string, unknown>);
             }, 1000); // 1 second debounce
             return () => clearTimeout(timer);
         }
@@ -90,7 +115,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 background,
                 accent,
                 accentBreak,
-                foreground: "#ffffff",
+                foreground: isLight(background) ? "#0f172a" : "#ffffff", // Slate-900 for light mode text
             }
         };
         setConfig(customConfig);
@@ -115,10 +140,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     const deleteSavedTheme = (id: string) => {
-        setConfig(prev => ({
-            ...prev,
-            savedThemes: (prev.savedThemes || []).filter(t => t.id !== id)
-        }));
+        setConfig(prev => {
+            const themeToDelete = prev.savedThemes?.find(t => t.id === id);
+            const nextSavedThemes = (prev.savedThemes || []).filter(t => t.id !== id);
+
+            // Check if the theme being deleted is the currently active one
+            // We match by values since 'custom' mode doesn't store the source ID
+            const isActive = prev.mode === "custom" && themeToDelete &&
+                prev.custom?.background === themeToDelete.background &&
+                prev.custom?.accent === themeToDelete.accent;
+
+            if (isActive) {
+                // Revert to default preset
+                return {
+                    ...DEFAULT_THEME_CONFIG,
+                    savedThemes: nextSavedThemes
+                };
+            }
+
+            return {
+                ...prev,
+                savedThemes: nextSavedThemes
+            };
+        });
     };
 
     return (
@@ -159,12 +203,26 @@ function applyThemeFromConfig(cfg: ThemeConfig) {
         root.style.setProperty("--accent-break", preset.colors.accentBreak || preset.colors.accent);
         root.style.setProperty("--bg-card", preset.colors.card);
         root.style.setProperty("--bg-secondary", preset.colors.secondary);
+        root.style.setProperty("--bg-card-overlay", `color-mix(in srgb, ${preset.colors.foreground}, transparent 95%)`);
+        root.style.setProperty("--border-card-overlay", `color-mix(in srgb, ${preset.colors.foreground}, transparent 90%)`);
     } else if (cfg.mode === "custom" && cfg.custom) {
         root.style.setProperty("--bg-main", cfg.custom.background);
         root.style.setProperty("--text-primary", cfg.custom.foreground);
         root.style.setProperty("--accent-primary", cfg.custom.accent);
         root.style.setProperty("--accent-break", cfg.custom.accentBreak || cfg.custom.accent);
-        root.style.setProperty("--bg-card", `${cfg.custom.background}80`);
+        root.style.setProperty("--bg-card", `color-mix(in srgb, ${cfg.custom.background}, transparent 50%)`);
         root.style.setProperty("--bg-secondary", cfg.custom.background);
+
+        // Manual glass tuning
+        const isBgLight = isLight(cfg.custom.background);
+        if (isBgLight) {
+            // Clean light mode glass: Significant black tint (12%) with stronger border
+            root.style.setProperty("--bg-card-overlay", "rgba(0, 0, 0, 0.12)");
+            root.style.setProperty("--border-card-overlay", "rgba(0, 0, 0, 0.15)");
+        } else {
+            // Standard dark mode glass: Faint white tint
+            root.style.setProperty("--bg-card-overlay", "rgba(255, 255, 255, 0.05)");
+            root.style.setProperty("--border-card-overlay", "rgba(255, 255, 255, 0.1)");
+        }
     }
 }

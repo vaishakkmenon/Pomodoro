@@ -44,7 +44,7 @@ export default function TimeDisplay({ secondsLeft, onTimeChange, onPause }: Prop
             <button
                 type="button"
                 onClick={startEditing}
-                className="inline-block min-w-[6ch] text-center align-middle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 rounded"
+                className="inline-block min-w-[6ch] text-center align-middle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-primary)]/25 rounded"
                 title="Click to edit time (MM:SS). You can also type 2530 → 25:30 or 30 → 30:00"
             >
                 {formatTime(secondsLeft)}
@@ -68,8 +68,8 @@ export default function TimeDisplay({ secondsLeft, onTimeChange, onPause }: Prop
                 else if (e.key === "Escape") cancelEdit();
             }}
             className={cx(
-                "inline-block w-[6ch] text-center bg-transparent border-b outline-none caret-white align-middle",
-                inputError ? "border-red-400 focus:border-red-400" : "border-white/20 focus:border-white/40"
+                "inline-block w-[6ch] text-center bg-transparent border-b outline-none caret-[var(--text-primary)] align-middle",
+                inputError ? "border-red-400 focus:border-red-400" : "border-[var(--text-primary)]/20 focus:border-[var(--text-primary)]/40"
             )}
             inputMode="numeric"
             aria-label="Edit timer (MM:SS or digits like 2530)"

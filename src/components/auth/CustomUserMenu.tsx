@@ -80,14 +80,16 @@ export function CustomUserMenu() {
                         </div>
                     </div>
 
-                    <Link
-                        href="/admin"
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                        <Shield size={16} />
-                        Admin Panel
-                    </Link>
+                    {isOwner && (
+                        <Link
+                            href="/admin"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                        >
+                            <Shield size={16} />
+                            Admin Panel
+                        </Link>
+                    )}
 
                     <button
                         onClick={() => signOut()}

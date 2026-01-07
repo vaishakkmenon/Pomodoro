@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Task } from "@/types/task";
 import { TaskItem } from "./TaskItem";
 import { Plus } from "lucide-react";
@@ -12,17 +12,25 @@ interface TaskListProps {
     deleteTask: (id: string) => void;
     toggleTask: (id: string) => void;
     setActiveTask: (id: string | null) => void;
+    updateTaskEstimate: (id: string, n: number) => void;
 }
 
 // Add import at top
 import { useSettings } from "@/hooks/useSettings";
 
-export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask, setActiveTask }: TaskListProps) {
+export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask, setActiveTask, updateTaskEstimate }: TaskListProps) {
     const { settings } = useSettings();
     const [isAdding, setIsAdding] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [newTitle, setNewTitle] = useState("");
     const [estPomodoros, setEstPomodoros] = useState(1);
+
+    // Force re-render periodically to update relative time
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 30000); // 30s update
+        return () => clearInterval(interval);
+    }, []);
 
     // Calculate Finish Time
     const incompleteTasks = tasks.filter(t => !t.isComplete);
@@ -51,7 +59,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
         <div className="w-full max-w-[min(90vw,28rem)] mx-auto">
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between mb-2 group text-white/80 hover:text-white transition-colors"
+                className="w-full flex items-center justify-between mb-2 group text-[var(--text-primary)]/80 hover:text-[var(--text-primary)] transition-colors"
             >
                 <div className="flex items-center gap-2">
                     <div className={cx("transition-transform duration-200", isExpanded ? "rotate-0" : "-rotate-90")}>
@@ -69,15 +77,15 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                         </svg>
                     </div>
                     <h2 className="text-lg font-bold">Tasks</h2>
-                    <span className="text-sm font-normal text-white/40">
+                    <span className="text-sm font-normal text-[var(--text-primary)]/40">
                         {tasks.length - incompleteTasks.length}/{tasks.length}
                     </span>
                 </div>
-                <div className="h-px flex-1 bg-white/10 mx-4" />
+                <div className="h-px flex-1 bg-[var(--text-primary)]/10 mx-4" />
 
                 {/* Finish Time Display */}
                 {totalRemainingPomodoros > 0 && (
-                    <div className="text-xs text-white/30 font-mono whitespace-nowrap">
+                    <div className="text-xs text-[var(--text-primary)]/30 font-mono whitespace-nowrap">
                         Est. {calculatedTimeStr}
                     </div>
                 )}
@@ -108,6 +116,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                                             onToggle={toggleTask}
                                             onDelete={deleteTask}
                                             onSelect={setActiveTask}
+                                            onUpdateEstimate={updateTaskEstimate}
                                         />
                                     </motion.div>
                                 ))}
@@ -117,7 +126,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                                 <motion.form
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="bg-zinc-900 border border-white/20 rounded-xl p-4 space-y-4"
+                                    className="bg-[var(--bg-secondary)] border border-[var(--text-primary)]/20 rounded-xl p-4 space-y-4"
                                     onSubmit={handleSubmit}
                                 >
                                     <input
@@ -126,32 +135,32 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                                         placeholder="What are you working on?"
                                         value={newTitle}
                                         onChange={(e) => setNewTitle(e.target.value)}
-                                        className="w-full bg-transparent text-xl text-white placeholder:text-white/30 outline-none"
+                                        className="w-full bg-transparent text-xl text-[var(--text-primary)] placeholder:text-[var(--text-primary)]/30 outline-none"
                                     />
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-white/60">Est Pomodoros</span>
+                                            <span className="text-sm font-bold text-[var(--text-primary)]/60">Est Pomodoros</span>
                                             <input
                                                 type="number"
                                                 min="1"
                                                 max="10"
                                                 value={estPomodoros}
                                                 onChange={(e) => setEstPomodoros(Number(e.target.value))}
-                                                className="w-16 bg-white/5 rounded-lg p-2 text-center text-white border-none outline-none font-mono"
+                                                className="w-16 bg-[var(--text-primary)]/5 rounded-lg p-2 text-center text-[var(--text-primary)] border-none outline-none font-mono"
                                             />
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
                                                 onClick={() => setIsAdding(false)}
-                                                className="px-4 py-2 text-sm font-medium text-white/50 hover:text-white transition-colors"
+                                                className="px-4 py-2 text-sm font-medium text-[var(--text-primary)]/50 hover:text-[var(--text-primary)] transition-colors"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 type="submit"
                                                 disabled={!newTitle.trim()}
-                                                className="px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="px-6 py-2 bg-[var(--text-primary)] text-[var(--bg-main)] font-bold rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 Save
                                             </button>
@@ -161,7 +170,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                             ) : (
                                 <button
                                     onClick={() => setIsAdding(true)}
-                                    className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-white/10 rounded-xl text-white/40 font-bold hover:bg-white/5 hover:border-white/20 transition-all"
+                                    className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-[var(--text-primary)]/10 rounded-xl text-[var(--text-primary)]/40 font-bold hover:bg-[var(--text-primary)]/5 hover:border-[var(--text-primary)]/20 transition-all"
                                 >
                                     <Plus className="w-5 h-5" />
                                     Add Task

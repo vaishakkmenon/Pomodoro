@@ -1,19 +1,22 @@
 import { useTheme } from "@/hooks/useTheme";
+import { useState } from "react";
 import cx from "clsx";
-import { Check, Lock, Save } from "lucide-react";
+import { Check, Save } from "lucide-react";
 import { usePremium } from "@/hooks/usePremium";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 
 export function ThemeSelector() {
     const { config, setPreset, setCustomTheme, availablePresets, saveCurrentAsPreset, deleteSavedTheme } = useTheme();
     const { isPremium } = usePremium();
+    const [isNaming, setIsNaming] = useState(false);
+    const [themeName, setThemeName] = useState("");
 
     // For now, Presets are free for everyone.
     // Custom/Image modes will be locked based on Auth/Premium status in the future.
 
     return (
         <div className="space-y-4">
-            <h3 className="text-sm font-medium text-white/70">Select Theme</h3>
+            <h3 className="text-sm font-medium text-[var(--text-primary)]/70">Select Theme</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* Standard Presets */}
                 {availablePresets.map((preset) => {
@@ -26,8 +29,8 @@ export function ThemeSelector() {
                             className={cx(
                                 "relative group flex flex-col items-center gap-2 p-3 rounded-xl transition-all border",
                                 isActive
-                                    ? "bg-white/10 border-white/30"
-                                    : "bg-transparent border-transparent hover:bg-white/5"
+                                    ? "bg-[var(--text-primary)]/10 border-[var(--text-primary)]/30"
+                                    : "bg-transparent border-transparent hover:bg-[var(--text-primary)]/5"
                             )}
                         >
                             {/* Color Preview Swatch */}
@@ -50,7 +53,7 @@ export function ThemeSelector() {
 
                             <span className={cx(
                                 "text-xs font-medium",
-                                isActive ? "text-white" : "text-white/50 group-hover:text-white/80"
+                                isActive ? "text-[var(--text-primary)]" : "text-[var(--text-primary)]/50 group-hover:text-[var(--text-primary)]/80"
                             )}>
                                 {preset.name}
                             </span>
@@ -72,8 +75,8 @@ export function ThemeSelector() {
                             className={cx(
                                 "relative group flex flex-col items-center gap-2 p-3 rounded-xl transition-all border cursor-pointer",
                                 isActive
-                                    ? "bg-white/10 border-white/30"
-                                    : "bg-transparent border-transparent hover:bg-white/5"
+                                    ? "bg-[var(--text-primary)]/10 border-[var(--text-primary)]/30"
+                                    : "bg-transparent border-transparent hover:bg-[var(--text-primary)]/5"
                             )}
                         >
                             {/* Color Preview Swatch */}
@@ -97,7 +100,7 @@ export function ThemeSelector() {
                             <div className="flex items-center justify-center w-full relative">
                                 <span className={cx(
                                     "text-xs font-medium truncate max-w-[80%]",
-                                    isActive ? "text-white" : "text-white/50 group-hover:text-white/80"
+                                    isActive ? "text-[var(--text-primary)]" : "text-[var(--text-primary)]/50 group-hover:text-[var(--text-primary)]/80"
                                 )}>
                                     {theme.name}
                                 </span>
@@ -108,7 +111,7 @@ export function ThemeSelector() {
                                         e.stopPropagation();
                                         deleteSavedTheme(theme.id);
                                     }}
-                                    className="absolute -right-1 p-1 text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute -right-1 p-1 text-[var(--text-primary)]/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                                     title="Delete Theme"
                                 >
                                     &times;
@@ -121,9 +124,9 @@ export function ThemeSelector() {
 
             {/* Premium: Custom Colors */}
             {isPremium && (
-                <div className="mt-6 p-4 rounded-xl border border-white/5 bg-white/5 transition-all">
+                <div className="mt-6 p-4 rounded-xl border border-[var(--text-primary)]/5 bg-[var(--text-primary)]/5 transition-all">
                     <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-medium text-white/70">Custom Colors</h4>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]/70">Custom Colors</h4>
                     </div>
 
                     <div className="space-y-4">
@@ -146,14 +149,57 @@ export function ThemeSelector() {
                                 />
                             </div>
                         </div>
-                        <div className="flex justify-between items-center mt-4">
-                            <p className="text-xs text-white/30 italic">Pick your perfect combo.</p>
-                            <button
-                                onClick={() => saveCurrentAsPreset(`Custom ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`)}
-                                className="text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg transition-colors text-white/70"
-                            >
-                                <Save className="w-3 h-3" /> Save Preset
-                            </button>
+
+                        <div className="mt-4 pt-4 border-t border-[var(--text-primary)]/5">
+                            {isNaming ? (
+                                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="Theme Name..."
+                                        value={themeName}
+                                        onChange={(e) => setThemeName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && themeName.trim()) {
+                                                saveCurrentAsPreset(themeName.trim());
+                                                setIsNaming(false);
+                                                setThemeName("");
+                                            }
+                                            if (e.key === "Escape") setIsNaming(false);
+                                        }}
+                                        className="flex-1 bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--text-primary)]/30 placeholder:text-[var(--text-primary)]/30"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (themeName.trim()) {
+                                                saveCurrentAsPreset(themeName.trim());
+                                                setIsNaming(false);
+                                                setThemeName("");
+                                            }
+                                        }}
+                                        disabled={!themeName.trim()}
+                                        className="text-xs bg-[var(--accent-primary)] text-[var(--bg-main)] px-3 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        onClick={() => setIsNaming(false)}
+                                        className="text-xs text-[var(--text-primary)]/50 hover:text-[var(--text-primary)] px-2"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center">
+                                    <p className="text-xs text-[var(--text-primary)]/30 italic">Pick your perfect combo.</p>
+                                    <button
+                                        onClick={() => setIsNaming(true)}
+                                        className="text-xs flex items-center gap-2 bg-[var(--text-primary)]/5 hover:bg-[var(--text-primary)]/10 px-3 py-2 rounded-lg transition-colors text-[var(--text-primary)]/70"
+                                    >
+                                        <Save className="w-3 h-3" /> Save Preset
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

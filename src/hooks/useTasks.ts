@@ -85,14 +85,21 @@ export function useTasks() {
 
     const incrementTaskPomodoro = useCallback((id: string) => {
         let justCompleted = false;
+        let nextActiveId = state.activeTaskId;
+
         const newTasks = state.tasks.map((t) => {
             if (t.id === id) {
-                const newCompleted = t.completedPomodoros + 1;
-                // Auto-complete if goal reached (and wasn't already complete)
+                // Cap at estimated
+                const newCompleted = Math.min(t.completedPomodoros + 1, t.estimatedPomodoros);
+
+                // Check completion (hit estimate)
                 const goalReached = newCompleted >= t.estimatedPomodoros;
+
+                // If it wasn't complete before but is now
                 if (goalReached && !t.isComplete) {
                     justCompleted = true;
                 }
+
                 return {
                     ...t,
                     completedPomodoros: newCompleted,
@@ -101,8 +108,55 @@ export function useTasks() {
             }
             return t;
         });
-        updateState({ ...state, tasks: newTasks });
+
+        // Auto-advance logic if just completed
+        if (justCompleted) {
+            // Find current index
+            const currentIndex = newTasks.findIndex(t => t.id === id);
+            if (currentIndex !== -1) {
+                // Look for next incomplete task after this one
+                const nextTask = newTasks.find((t, i) => i > currentIndex && !t.isComplete);
+                // If found, switch to it using the ID from the UPDATED list (though IDs don't change)
+                if (nextTask) {
+                    nextActiveId = nextTask.id;
+                } else {
+                    // Optional: Wrap around? Or just deselect? 
+                    // Let's look from start if we want wrap-around, but standard behavior usually stops or stays.
+                    // Let's try to find ANY incomplete task if we haven't found one yet (wrapping)
+                    // const anyNext = newTasks.find(t => !t.isComplete && t.id !== id);
+                    // if (anyNext) nextActiveId = anyNext.id;
+                    // User requested "next task". Linear progression is safest.
+                }
+            }
+        }
+
+        updateState({
+            ...state,
+            tasks: newTasks,
+            activeTaskId: nextActiveId
+        });
         return justCompleted;
+    }, [state, updateState]);
+
+    const updateTaskEstimate = useCallback((id: string, newEstimate: number) => {
+        const newTasks = state.tasks.map((t) => {
+            if (t.id === id) {
+                // Ensure estimate is at least 1 and >= completed (optional, but safest to cap lower bound)
+                const safeEstimate = Math.max(1, newEstimate);
+                // Also, if we lower estimate below completed, should we cap completed? 
+                // Or just let it be weird? Better to keep completed as is physics, but maybe unmark complete?
+                // Let's simplify: Set estimate. If safeEstimate <= completed, mark complete?
+                const isNowComplete = t.completedPomodoros >= safeEstimate;
+
+                return {
+                    ...t,
+                    estimatedPomodoros: safeEstimate,
+                    isComplete: isNowComplete
+                };
+            }
+            return t;
+        });
+        updateState({ ...state, tasks: newTasks });
     }, [state, updateState]);
 
     const setActiveTask = useCallback((id: string | null) => {
@@ -117,5 +171,6 @@ export function useTasks() {
         toggleTask,
         incrementTaskPomodoro,
         setActiveTask,
+        updateTaskEstimate,
     };
 }

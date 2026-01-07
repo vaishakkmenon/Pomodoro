@@ -48,12 +48,15 @@ export default function SidebarTabs({
                     className="relative rounded-2xl"
                 >
                     {/* Outline thumb — matches wrapper exactly */}
+                    {/* Outline thumb — matches wrapper exactly */}
                     <div
                         aria-hidden
                         className={cx(
                             "pointer-events-none absolute left-[3px] right-[3px] top-0 rounded-full box-border",
                             "border transition-transform duration-300 ease-out",
-                            tab === "study" ? "border-emerald-300/40" : "border-sky-300/40"
+                            tab === "study"
+                                ? "border-[var(--accent-primary)] border-opacity-40"
+                                : "border-[var(--accent-break)] border-opacity-40"
                         )}
                         style={{ height: ITEM_H, transform: translate }}
                     />
@@ -79,7 +82,7 @@ export default function SidebarTabs({
                                         className={cx(
                                             "relative inline-flex w-full items-center justify-center text-center",
                                             "h-10 px-4 whitespace-nowrap rounded-[inherit]",
-                                            selected ? (isStudy ? "bg-emerald-400/10" : "bg-sky-400/10") : "bg-transparent",
+                                            selected ? (isStudy ? "bg-[var(--accent-primary)]/10" : "bg-[var(--accent-break)]/10") : "bg-transparent",
                                             "text-white/80 hover:text-white transition-colors",
                                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ring-inset",
                                             selected && "text-white"

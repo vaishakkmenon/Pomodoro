@@ -43,7 +43,7 @@ export async function getUserPreferences() {
     }
 }
 
-export async function updateUserPreferences(preferences: any) {
+export async function updateUserPreferences(preferences: Record<string, unknown>) {
     try {
         const user = await currentUser();
         if (!user) return { success: false, error: "Unauthorized" };

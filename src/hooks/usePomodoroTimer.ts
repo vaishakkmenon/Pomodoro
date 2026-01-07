@@ -61,6 +61,22 @@ export function usePomodoroTimer(opts: Options = {}) {
         }
     }, []); // Run once on mount
 
+    // Auto-update timer if settings change and it was sitting at full duration
+    const prevDurationMap = useRef(durationMap);
+    useEffect(() => {
+        const oldDur = prevDurationMap.current[tab];
+        const newDur = durationMap[tab];
+
+        // If duration for current tab changed
+        if (oldDur !== newDur) {
+            // And we were sitting at the old max (idle/fresh)
+            if (secondsLeft === oldDur) {
+                setSecondsLeft(newDur);
+            }
+        }
+        prevDurationMap.current = durationMap;
+    }, [durationMap, tab, secondsLeft]);
+
     // Update secondsLeft if settings change and we are at the "start" of a timer? 
     // Actually, we shouldn't arbitrarily change secondsLeft if settings change UNLESS we haven't loaded saved state yet
     // OR if we want live updates. But for this fix, we just ensure simple hydration.

@@ -27,7 +27,8 @@ export default function Home() {
         deleteTask,
         toggleTask,
         setActiveTask,
-        incrementTaskPomodoro
+        incrementTaskPomodoro,
+        updateTaskEstimate
     } = useTasks();
 
 
@@ -43,7 +44,7 @@ export default function Home() {
     // Global Progress Calculation
     const totalEst = tasks.reduce((acc, t) => acc + t.estimatedPomodoros, 0);
     const totalDone = tasks.reduce((acc, t) => acc + t.completedPomodoros, 0);
-    const workDuration = settings.durations.work * 60;
+
 
     // Timer Logic
     const timerState = usePomodoroTimer({
@@ -75,22 +76,62 @@ export default function Home() {
         }
     });
 
+    const { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause } = timerState;
+
     // Global Progress Calculation (Depends on timerState)
+    // Formula: We treat the entire set of tasks as a single timeline: [Work] [Break] [Work] [Break] ...
+    // We approximate that every task unit is followed by a short break (except the last one).
+    // Future improvement: Handle long breaks explicitly if needed.
     let globalProgress: number | null = null;
     if (tasks.length > 0 && totalEst > 0) {
-        const workDuration = settings.durations.work * 60;
-        // Current session progress (only if in study mode)
-        // We cap partial progress at 1 unit to avoid over-crediting
-        const currentSessionRatio = (timerState.phaseKind === "study")
-            ? Math.max(0, 1 - timerState.secondsLeft / workDuration)
-            : 0;
+        const { work, shortBreak } = settings.durations;
+        const workSec = work * 60;
+        const breakSec = shortBreak * 60; // Use short break as standard "gap" size for estimation
 
-        // Formula: (Total Finished Units + Current Partial Unit) / Total Estimated Units
-        globalProgress = Math.min(100, ((totalDone + currentSessionRatio) / totalEst) * 100);
+        // 1. Total Project Duration (Estimated)
+        // Works + Gaps. Gaps = TotalEst - 1 (roughly)
+        const totalGaps = Math.max(0, totalEst - 1);
+        const totalDurationSec = (totalEst * workSec) + (totalGaps * breakSec);
+
+        // 2. Elapsed Duration
+        // Base: Fully completed pomodoros
+        let elapsedSec = totalDone * workSec;
+
+        // Add completed gaps
+        // If we are in Study: We must have finished 'totalDone' breaks? 
+        // Logic: If I've done 1 pom, I'm now studying for #2. That means Break #1 happened.
+        // So if phase == study, gaps passed = totalDone.
+        // If phase == break, gaps passed = totalDone - 1 (the current one is happening).
+        const textPhase = timerState.phaseKind === "study" ? "study" : "break";
+
+        const gapsPassed = textPhase === "study"
+            ? totalDone
+            : Math.max(0, totalDone - 1);
+
+        elapsedSec += gapsPassed * breakSec;
+
+        // If Study: Add (WorkDur - SecondsLeft)
+        // If Break: Add (BreakDur - SecondsLeft)
+        // Note: For 'long break', this might feel slightly off scale if we use shortBreak for estimation, 
+        // but visually it's smoother to just map current progress.
+        // Actually, let's use the REAL current duration for precise seconds.
+        const actualCurrentTotal = (tab === "study" ? work : tab === "short" ? shortBreak : settings.durations.longBreak) * 60;
+
+        const currentElapsed = Math.max(0, actualCurrentTotal - timerState.secondsLeft);
+
+        // Improve "Elapsed" adding for current session
+        // Only if consistent with our "Timeline" model.
+        // If we are in a 'Long Break' but our model assumed 'Short Break', we might overflow?
+        // Let's stick to the model: The model allocates 'breakSec' slots. 
+        // If the real break is longer, the bar might move slower or hang, but it won't break 100%.
+        // Let's just add `currentElapsed` but cap it at the slot size we allocated? 
+        // Or simpler: Just add it. The error margin is small enough for UI.
+
+        elapsedSec += currentElapsed;
+
+        globalProgress = Math.min(100, (elapsedSec / totalDurationSec) * 100);
     }
 
-    // Persistence
-    const { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause } = timerState;
     usePersistence(
         { tab, secondsLeft, isRunning, completedStudies, switchTab, setSeconds, start, pause },
         PERSIST_KEY
@@ -114,7 +155,7 @@ export default function Home() {
 
             <main
                 className={cx(
-                    "min-h-screen w-screen overflow-x-hidden relative flex flex-col items-center justify-center py-10 text-white transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                    "min-h-screen w-screen overflow-x-hidden relative flex flex-col items-center justify-center py-10 text-[var(--text-primary)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
                     isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[62vw]" : "pl-0"
                 )}
             >
@@ -135,6 +176,7 @@ export default function Home() {
                         deleteTask={deleteTask}
                         toggleTask={toggleTask}
                         setActiveTask={setActiveTask}
+                        updateTaskEstimate={updateTaskEstimate}
                     />
                 </div>
 
