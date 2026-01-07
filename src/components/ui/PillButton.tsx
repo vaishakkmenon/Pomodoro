@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import type { Phase } from "../../ui/types";
 import type { Accent } from "../../ui/types";
-import { pill } from "../../ui/Pill";
+import { pill } from "../../ui/styles";
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
     phase: Phase;
