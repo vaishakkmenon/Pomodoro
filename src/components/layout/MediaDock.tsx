@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cx } from "@/ui/cx";
-import { ChevronRight, ChevronLeft, Youtube, Maximize2, Minimize2, X } from "lucide-react";
+import { ChevronRight, ChevronLeft, Youtube, Maximize2, Minimize2, X, CloudRain } from "lucide-react";
 import { YouTubePlayer } from "@/components/media/YouTubePlayer";
 import { SpotifyPlaceholder } from "@/components/media/SpotifyPlaceholder";
+import { AmbientPlayer } from "@/components/media/AmbientPlayer";
 import { Settings } from "@/types/settings";
 
-type Tab = "spotify" | "youtube";
+type Tab = "spotify" | "youtube" | "sounds";
 
 interface MediaDockProps {
     settings: Settings;
@@ -35,6 +36,12 @@ export function MediaDock({
     };
 
     const handleTabChange = (tab: Tab) => {
+        // Toggle close if clicking currently active tab while open
+        if (isOpen && activeTab === tab) {
+            onOpenChange(false);
+            return;
+        }
+
         setActiveTab(tab);
         if (tab === "spotify" && isWide) {
             onToggleWide(); // Spotify doesn't support wide/theater mode
@@ -55,11 +62,11 @@ export function MediaDock({
                     initial={{ opacity: 0, width: 60, height: 225 }}
                     animate={{
                         opacity: 1,
-                        width: !isOpen ? 60 : isWide ? "65vw" : "30vw",
-                        height: !isOpen ? 225 : isWide ? "80vh" : "50vh",
+                        width: !isOpen ? 62 : isWide ? "65vw" : "30vw",
+                        height: !isOpen ? 285 : isWide ? "80vh" : "50vh",
                     }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
                     className={cx(
                         // Base layout
                         "z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex",
@@ -74,6 +81,8 @@ export function MediaDock({
                     <div className="flex-1 h-full relative min-w-0 overflow-hidden">
                         {activeTab === "youtube" ? (
                             <YouTubePlayer isWide={isWide} toggleTheaterMode={toggleTheaterMode} />
+                        ) : activeTab === "sounds" ? (
+                            <AmbientPlayer />
                         ) : (
                             <SpotifyPlaceholder />
                         )}
@@ -109,21 +118,24 @@ export function MediaDock({
                         </button>
 
                         <button
-                            onClick={() => handleTabChange("spotify")}
+                            onClick={() => {
+                                // Spotify Unavailable Logic
+                                // For now, we just do nothing or could show a toast.
+                                // Since we don't have a toast system ready in this file, we'll just ignore or log.
+                                // User requested "mark it as unavailable if clicked on" -> simple alert for now?
+                                // Better: just don't set active, maybe shake?
+                                // Let's prevent the tab change.
+                            }}
                             className={cx(
-                                "p-3 rounded-xl transition-all duration-300 relative",
-                                activeTab === "spotify" && isOpen ? "text-emerald-400 bg-emerald-400/10" : "text-white/40 hover:text-white"
+                                "p-3 rounded-xl transition-all duration-300 relative group cursor-not-allowed",
+                                activeTab === "spotify" && isOpen ? "text-emerald-400 bg-emerald-400/10" : "text-white/20"
                             )}
+                            title="Spotify (Coming Soon)"
                         >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <svg className="w-5 h-5 blur-[1px] opacity-50 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
                             </svg>
-                            {activeTab === "spotify" && isOpen && (
-                                <motion.div
-                                    layoutId="active-tab"
-                                    className="absolute inset-0 rounded-xl border-2 border-emerald-400/20"
-                                />
-                            )}
+                            {/* No active indicator logic needed since it can't be active */}
                         </button>
 
                         <div className="w-8 h-px bg-white/10" />
@@ -140,6 +152,24 @@ export function MediaDock({
                                 <motion.div
                                     layoutId="active-tab"
                                     className="absolute inset-0 rounded-xl border-2 border-red-400/20"
+                                />
+                            )}
+                        </button>
+
+                        <div className="w-8 h-px bg-white/10" />
+
+                        <button
+                            onClick={() => handleTabChange("sounds")}
+                            className={cx(
+                                "p-3 rounded-xl transition-all duration-300 relative",
+                                activeTab === "sounds" && isOpen ? "text-sky-400 bg-sky-400/10" : "text-white/40 hover:text-white"
+                            )}
+                        >
+                            <CloudRain className="w-5 h-5" />
+                            {activeTab === "sounds" && isOpen && (
+                                <motion.div
+                                    layoutId="active-tab"
+                                    className="absolute inset-0 rounded-xl border-2 border-sky-400/20"
                                 />
                             )}
                         </button>
