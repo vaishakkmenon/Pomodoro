@@ -1,25 +1,34 @@
-# 🍅 Pomodoro Timer
+# 🍅 Pomodoro Focus
+**A production-grade, immersive focus timer built with the latest modern web stack.**
+**Live Demo:** [https://pomodoro.vaishakmenon.com](https://pomodoro.vaishakmenon.com)
 
-A modern, feature-rich Pomodoro timer built with React, TypeScript, and Tailwind CSS. Designed for productivity with a beautiful dark UI and full keyboard accessibility.
+## 📖 Overview
+Pomodoro Focus is a productivity application designed to help users maintain flow state. It combines a customizable Pomodoro timer with an integrated "Media Dock" for ambient soundscapes, allowing users to create their perfect focus environment without leaving the tab. The app features secure authentication, persistent user settings, and a fully unresponsive, mobile-friendly UI.
 
-![Pomodoro Timer](https://img.shields.io/badge/React-19-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue) ![Vite](https://img.shields.io/badge/Vite-6-purple) ![Tailwind](https://img.shields.io/badge/Tailwind-4-cyan)
+## ✨ Key Features
+*   **Precision Timer:** Custom work/break intervals with audio chimes and visual progress indicators.
+*   **Immersive Media Dock:**
+    *   **YouTube Integration:** Built-in "Lofi Girl" player with theater mode and distraction-free "Stealth Mode".
+    *   **Ambient Mixer:** Mixable soundscapes (Rain, Forest, Cafe, Fireplace) with individual volume controls.
+*   **Secure Authentication:** User accounts powered by **Clerk**, allowing users to save their preferences and settings.
+*   **Modern UI/UX:** Glassmorphism design, smooth **Framer Motion** animations, and a fully responsive layout using **Tailwind CSS v4**.
+*   **Production Security:** Hardened **Content Security Policy (CSP)**, strict SSL enforcement, and server-side validation.
 
-## ✨ Features
+## 🛠️ Tech Stack
+*   **Frontend:** [Next.js 15 (App Router)](https://nextjs.org), [React 19](https://react.dev), [TypeScript](https://www.typescriptlang.org)
+*   **Styling:** [Tailwind CSS v4](https://tailwindcss.com), [Framer Motion](https://www.framer.com/motion/)
+*   **Authentication:** [Clerk](https://clerk.com) (Production Environment)
+*   **Database:** [Neon](https://neon.tech) (Serverless Postgres), [Drizzle ORM](https://orm.drizzle.team)
+*   **Infrastructure:** Deployed on **Netlify**, DNS managed via **Cloudflare**.
 
-- **Three timer modes**: Study (25 min), Short Break (5 min), Long Break (15 min)
-- **Automatic transitions**: Timer automatically moves to the next phase
-- **Long break scheduling**: Every 4th study session triggers a long break
-- **Click-to-edit time**: Flexible input supports `MM:SS`, `MMSS`, or just minutes
-- **Catch-up prompt**: Resume where you left off if you were away
-- **Persistent state**: Timer survives page refreshes and browser restarts
-- **Audio chime**: Notification sound when study sessions complete
-- **Keyboard accessible**: Full arrow key navigation between tabs and controls
-- **Dark mode**: Beautiful glassmorphic dark UI
+## 🚀 Technical Highlights
+*   **Custom CSP Implementation:** Engineered a strict Content Security Policy to securely handle third-party iFrames (YouTube/Spotify) and scripts while preventing XSS attacks.
+*   **Subdomain Auth:** Implemented Clerk production auth on a custom subdomain (`clerk.pomodoro...`) to solve third-party cookie restrictions.
+*   **React 19 & Next.js 15:** Utilizes the bleeding-edge React Server Components and Next.js Architecture.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - Node.js 18+
 - npm or pnpm
 
@@ -37,49 +46,26 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with HMR |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build locally |
-| `npm run test` | Run tests with Vitest |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run lint` | Run ESLint |
+The app will be available at `http://localhost:3000`
 
 ## 🏗️ Project Structure
 
 ```
 src/
-├── components/
-│   ├── timer/
-│   │   ├── Timer.tsx          # Main timer component
-│   │   ├── SidebarTabs.tsx    # Session mode tabs
-│   │   ├── TimeDisplay.tsx    # Editable time display
-│   │   ├── TimerControls.tsx  # Start/Pause/Reset buttons
-│   │   └── CatchupToast.tsx   # Catch-up notification
-│   └── ui/
-│       └── PillButton.tsx     # Styled button component
-├── hooks/
-│   ├── usePomodoroTimer.ts    # Core timer logic
-│   ├── usePersistence.ts      # localStorage persistence
-│   ├── useAudio.ts            # Audio playback
-│   └── useChime.ts            # Chime sound wrapper
-├── config/
-│   └── timer.ts               # Timer configuration & constants
-├── lib/
-│   └── time.ts                # Time formatting & parsing utilities
-├── types/
-│   └── timer.ts               # Shared TypeScript types
-└── ui/
-    ├── cx.ts                  # Class name utility
-    ├── Pill.ts                # Pill styling
-    ├── PillBase.ts            # Base pill styles
-    ├── PhaseAccent.ts         # Phase-based accent colors
-    └── types.ts               # UI type definitions
+├── app/               # Next.js App Router pages
+├── components/        # React components
+│   ├── auth/          # Authentication components
+│   ├── layout/        # Layout components (MediaDock, etc.)
+│   ├── media/         # Media players (YouTube, Ambient)
+│   ├── settings/      # Settings panels
+│   ├── tasks/         # Task management
+│   └── timer/         # Timer logic and UI
+├── config/            # Configuration constants
+├── db/                # Drizzle ORM schema and connection
+├── hooks/             # Custom React hooks
+├── lib/               # Utility functions
+├── types/             # TypeScript type definitions
+└── ui/                # Reusable UI components (buttons, inputs)
 ```
 
 ## 🧪 Testing
@@ -92,60 +78,14 @@ npm test
 
 # Run tests in watch mode
 npm run test:watch
-
-# Run tests with UI
-npm run test:ui
 ```
-
-### Test Coverage
-
-| Module | Tests |
-|--------|-------|
-| Time utilities (`time.test.ts`) | 22 |
-| Pomodoro timer hook | 8 |
-| Persistence hook | 11 |
-| Stored state hook | 8 |
-| Audio hook | 8 |
-| Chime hook | 5 |
-| PillButton component | 9 |
-| SidebarTabs component | 11 |
-| Timer component | 8 |
-| **Total** | **90** |
-
-## ⚙️ Configuration
-
-Default timer durations can be modified in `src/config/timer.ts`:
-
-```typescript
-export const DURATIONS: Record<Tab, number> = {
-    study: 25 * 60,  // 25 minutes
-    short: 5 * 60,   // 5 minutes
-    long: 15 * 60,   // 15 minutes
-};
-
-export const LONG_EVERY = 4; // Long break every N study sessions
-```
-
-## 🛣️ Roadmap
-
-See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for planned features:
-
-- [ ] Settings panel for custom durations
-- [ ] Browser notifications
-- [ ] Task management with pomodoro estimates
-- [ ] Ambient sounds (Cafe, Cozy, Nature themes)
-- [ ] Animated progress bar (sun/moon journey)
-- [ ] Session planning calculator
-- [ ] Dynamic backgrounds
 
 ## 🤝 Contributing
-
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📝 License
-
 This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
-Built with ❤️ using React, TypeScript, Vite, and Tailwind CSS
+Built with ❤️ using React, TypeScript, Next.js, and Tailwind CSS
