@@ -77,12 +77,13 @@ export function MediaDock({
                     transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
                     className={cx(
                         // Base layout
-                        "z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex",
+                        "hidden md:flex z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden",
 
+                        // Positioning Logic
                         // Positioning Logic
                         (isOpen && isWide)
                             ? "fixed left-4 top-1/2 -translate-y-1/2" // Wide Mode: Fixed to viewport left
-                            : "fixed left-4 top-1/2 -translate-y-1/2 md:absolute md:left-auto md:right-full md:mr-3" // Normal (Open or Closed): Absolute anchored to Timer
+                            : "fixed left-4 bottom-4 md:top-1/2 md:bottom-auto md:-translate-y-1/2 md:absolute md:left-auto md:right-full md:mr-3" // Mobile: Bottom-Left Fixed. Desktop: Absolute anchored to Timer
                     )}
                 >
                     {/* Content Area */}

@@ -322,7 +322,7 @@ export default function Timer({
                                 {chipText}
                             </div>
 
-                            <div className="text-8xl font-bold tabular-nums leading-none text-[var(--text-primary)]">
+                            <div className="text-6xl md:text-8xl font-bold tabular-nums leading-none text-[var(--text-primary)]">
                                 <TimeDisplay
                                     secondsLeft={secondsLeft}
                                     onTimeChange={setSeconds}

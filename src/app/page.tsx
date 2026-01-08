@@ -159,7 +159,7 @@ export default function Home() {
                     ease: [0.25, 1, 0.5, 1]
                 }}
                 className={cx(
-                    "min-h-screen w-screen relative flex flex-col items-center justify-center py-10 text-[var(--text-primary)]"
+                    "min-h-screen w-screen relative flex flex-col items-center justify-center py-10 pt-20 md:pt-10 text-[var(--text-primary)]"
                 )}
             >
 
