@@ -85,17 +85,13 @@ type Task = {
 
 ---
 
-### 2.2 Session Planning Calculator
+### 2.2 Session Planning Calculator [COMPLETED]
 **Priority**: Medium | **Effort**: Low
 
-Before starting, user can:
-1. See total pomodoros needed for all tasks
-2. Calculate end time based on current time + session durations
-3. Optionally set a "target end time" and see if tasks fit
-
-**Files**:
-- `src/components/planner/SessionPlanner.tsx` [NEW]
-- `src/lib/timeCalculations.ts` [NEW]
+**Status**: Implemented directly in `TaskList.tsx`.
+- **Completed**: Total pomodoros needed calculation.
+- **Completed**: End time calculation based on incomplete tasks.
+- **Skipped**: "Target end time" comparison (User deemed unnecessary).
 
 ---
 
@@ -142,106 +138,39 @@ When a study session completes:
 
 ## Phase 4: Ambient Sounds
 
-### 4.1 Sound Theme System
-**Priority**: High | **Effort**: Medium
-
-**Theme Structure**:
-```typescript
-type SoundTheme = {
-  id: string;
-  name: string;
-  icon: string;
-  sounds: {
-    name: string;
-    src: string;
-    defaultVolume: number;
-  }[];
-};
-```
-
-**Preset Themes**:
-
-| Theme | Sounds |
-|-------|--------|
-| ☕ Cafe | Coffee machine, quiet chatter, cups clinking |
-| 🌧 Cozy | Rain on window, fireplace crackle, thunder (distant) |
-| 🌲 Nature | Forest birds, gentle stream, wind through trees |
-| 📚 Library | Page turning, quiet typing, clock ticking |
-| 🌊 Ocean | Waves, seagulls, beach ambiance |
-
-**Files to create**:
-- `src/components/sounds/SoundMixer.tsx` [NEW] — individual volume sliders
-- `src/components/sounds/ThemeSelector.tsx` [NEW] — dropdown to pick theme
-- `src/hooks/useAmbientSounds.ts` [NEW]
-- `src/config/soundThemes.ts` [NEW]
-- `public/sounds/ambient/` [NEW] — audio files (source from freesound.org, use CC0 licensed)
-
-**Storage key**: `pomodoro:sounds:v1`
-
-**UI Concept**:
-```
-┌─────────────────────────────┐
-│ 🎵 Ambient Sounds           │
-├─────────────────────────────┤
-│ Theme: [☕ Cafe        ▾]   │
-├─────────────────────────────┤
-│ Coffee Machine   ████░░ 60% │
-│ Background Chat  ██░░░░ 30% │
-│ Cups & Plates    ███░░░ 50% │
-├─────────────────────────────┤
-│ [Master Volume]  ██████ 80% │
-└─────────────────────────────┘
-```
+### 4.1 Sound Theme System [SKIPPED]
+**Status**: Skipped by user request.
 
 ---
 
-### 4.2 YouTube Embed (Optional Background)
-**Priority**: Low | **Effort**: Low
-
-- User pastes a YouTube URL (lo-fi streams, study music)
-- Embed as background audio with IFrame API
-- Respects master volume
-
-**Files**:
-- `src/components/sounds/YouTubePlayer.tsx` [NEW]
-
-**Note**: YouTube embeds can't be fully controlled (ads, availability). This is a "nice to have" feature.
+### 4.2 YouTube Embed (Media Dock) [COMPLETED]
+**Status**: Implemented as the **Media Dock**.
 
 ---
 
 ## Phase 5: Visual Polish
 
-### 5.1 Dynamic Backgrounds
+### 5.1 Dynamic Backgrounds [SKIPPED]
+**Status**: Skipped by user request.
+
+### 5.2 Theme Selection System
 **Priority**: Medium | **Effort**: Medium
 
-Backgrounds that change based on:
-- Time of day (morning/afternoon/evening/night gradients)
-- Current phase (warm colors for study, cool for breaks)
+**Tiers**:
+1.  **Guest / Everyone**: Access to predefined solid color themes (Midnight, Ocean, Forest, Sunset, Lavender).
+2.  **Signed In**: Access to **Custom Color Palette** builder (choose primary/background colors).
+3.  **Premium**: Access to **Custom Background Images** (upload/URL).
 
-**Implementation**:
-- CSS custom properties for background
-- Smooth transitions between states
-- Optional: Parallax effect with layered SVGs
-
-**Files**:
-- `src/components/background/DynamicBackground.tsx` [NEW]
-- `src/hooks/useTimeOfDay.ts` [NEW]
-
----
-
-### 5.2 Theme Selection (Non-Account Based)
-**Priority**: Low | **Effort**: Low
-
-Preset visual themes stored in localStorage:
-- Default Dark
-- Warm Sunset
-- Ocean Blue
-- Forest Green
-- Minimal Light
+**Technical Approach**:
+- **State**: `useTheme` hook to manage current selection + derived CSS variables.
+- **Storage**: `localStorage` `pomodoro:theme:v1` (synced to DB later for users).
+- **UI**: New tab in Settings Modal for "Appearance".
 
 **Files**:
-- `src/config/visualThemes.ts` [NEW]
-- Update `index.css` with theme CSS variables
+- `src/types/theme.ts` [NEW]
+- `src/config/themes.ts` [NEW] (Presets)
+- `src/hooks/useTheme.ts` [NEW]
+- `src/components/settings/ThemeSelector.tsx` [NEW]
 
 ---
 
