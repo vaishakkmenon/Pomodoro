@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { allowedUsers, appUsers } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { validate, preferencesSchema } from "@/lib/validation";
 
 export async function getPremiumStatus() {
     try {
@@ -24,7 +25,6 @@ export async function getPremiumStatus() {
         return false;
     }
 }
-// ... (existing code)
 
 export async function getUserPreferences() {
     try {
@@ -48,21 +48,18 @@ export async function updateUserPreferences(preferences: Record<string, unknown>
         const user = await currentUser();
         if (!user) return { success: false, error: "Unauthorized" };
 
-        // Upsert logic: if user doesn't exist in appUsers (rare if sync works), create them.
-        // For now, assume user exists or simple update. 
-        // Actually, best to use onConflictDoUpdate if we were creating, but let's just update for now as user creation happens elsewhere usually.
-        // Wait, if they are new, they might not be in appUsers yet if we rely on webhooks. 
-        // Let's safe upsert.
+        const validPrefs = validate(preferencesSchema, preferences);
 
+        // Upsert logic...
         await db.insert(appUsers).values({
             id: user.id,
             email: user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress || "",
-            preferences,
+            preferences: validPrefs,
             updatedAt: new Date(),
         }).onConflictDoUpdate({
             target: appUsers.id,
             set: {
-                preferences,
+                preferences: validPrefs,
                 updatedAt: new Date(),
             }
         });
