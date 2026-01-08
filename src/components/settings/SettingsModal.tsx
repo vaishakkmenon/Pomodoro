@@ -253,7 +253,7 @@ export function SettingsModal({
                                         </div>
                                     </section>
 
-                                    <section className="pt-4 border-t border-[var(--text-primary)]/5">
+                                    <section className="hidden md:block pt-4 border-t border-[var(--text-primary)]/5">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2 text-[var(--text-primary)]/80 font-medium">
                                                 <Music className="w-4 h-4" />
