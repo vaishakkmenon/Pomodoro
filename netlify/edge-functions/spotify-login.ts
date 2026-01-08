@@ -1,7 +1,21 @@
 import { getAuthUrl } from "./_shared/spotify.ts";
-import { getSupabase } from "./_shared/supabase.ts";
+import { getAppUser, isUserAllowed } from "./_shared/neon.ts";
+import { signState } from "./_shared/csrf.ts";
+import { checkRateLimit, rateLimitHeaders } from "./_shared/rateLimit.ts";
 
 export default async function handler(request: Request): Promise<Response> {
+    // Rate limiting
+    const rateLimit = await checkRateLimit(request, "login");
+    if (!rateLimit.allowed) {
+        return new Response(JSON.stringify({ error: "Too many requests" }), {
+            status: 429,
+            headers: {
+                "Content-Type": "application/json",
+                ...rateLimitHeaders(rateLimit),
+            },
+        });
+    }
+
     try {
         const url = new URL(request.url);
         const siteUserId = url.searchParams.get("user_id");
@@ -13,16 +27,10 @@ export default async function handler(request: Request): Promise<Response> {
             });
         }
 
-        const supabase = getSupabase();
+        // 1. Verify Site User exists
+        const siteUser = await getAppUser(siteUserId);
 
-        // 1. Verify Site User
-        const { data: siteUser, error: userError } = await supabase
-            .from("users")
-            .select("id, email")
-            .eq("id", siteUserId)
-            .single();
-
-        if (userError || !siteUser) {
+        if (!siteUser) {
             return new Response(null, {
                 status: 302,
                 headers: { Location: "/?spotify_error=invalid_user" },
@@ -30,25 +38,20 @@ export default async function handler(request: Request): Promise<Response> {
         }
 
         // 2. Check Premium Status
-        const { data: isPremium } = await supabase
-            .from("allowed_users")
-            .select("is_active")
-            .eq("email", siteUser.email.toLowerCase())
-            .single();
+        const isPremium = await isUserAllowed(siteUser.email);
 
-        if (!isPremium?.is_active) {
+        if (!isPremium) {
             return new Response(null, {
                 status: 302,
                 headers: { Location: "/?spotify_error=not_premium" },
             });
         }
 
-        // 3. Generate State with Link Info
-        const stateObj = {
+        // 3. Generate signed state with CSRF protection
+        const state = await signState({
             csrf: crypto.randomUUID(),
             siteUserId: siteUser.id,
-        };
-        const state = btoa(JSON.stringify(stateObj));
+        });
 
         // Store state in cookie for verification on callback
         const authUrl = getAuthUrl(state);
@@ -59,7 +62,8 @@ export default async function handler(request: Request): Promise<Response> {
             status: 302,
             headers: {
                 Location: authUrl,
-                "Set-Cookie": `spotify_oauth_state=${state}; Max-Age=600; Path=/; HttpOnly; SameSite=Lax${secureFlag}`,
+                "Set-Cookie": `spotify_oauth_state=${encodeURIComponent(state)}; Max-Age=600; Path=/; HttpOnly; SameSite=Lax${secureFlag}`,
+                ...rateLimitHeaders(rateLimit),
             },
         });
     } catch (error) {

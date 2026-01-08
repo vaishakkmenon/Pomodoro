@@ -1,5 +1,5 @@
 
-import { pgTable, serial, text, boolean, timestamp, integer, uuid, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, uuid, jsonb, index, unique } from "drizzle-orm/pg-core";
 
 // --- Allowed Users (Admin Panel) ---
 export const allowedUsers = pgTable("allowed_users", {
@@ -48,3 +48,15 @@ export const spotifyPreferences = pgTable("spotify_preferences", {
     volumeBreak: integer("volume_break").default(50),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// --- Rate Limits (for edge function rate limiting) ---
+export const rateLimits = pgTable("rate_limits", {
+    id: serial("id").primaryKey(),
+    key: text("key").notNull(),                          // Format: "endpoint:identifier" (e.g., "login:192.168.1.1")
+    windowStart: timestamp("window_start").notNull(),    // Start of the rate limit window
+    requestCount: integer("request_count").default(1).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+    index("idx_rate_limits_key_window").on(table.key, table.windowStart),
+    unique("uq_rate_limits_key_window").on(table.key, table.windowStart),
+]);

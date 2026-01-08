@@ -1,85 +1,54 @@
 import { handleCors, jsonResponse, errorResponse } from "./_shared/cors.ts";
-import { getSupabase } from "./_shared/supabase.ts";
-// @ts-ignore
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-
+import { addAllowedUser, isUserAllowed } from "./_shared/neon.ts";
+import { checkRateLimit, rateLimitHeaders } from "./_shared/rateLimit.ts";
+import { validateEmail } from "./_shared/validation.ts";
+import { verifyAdminRequest } from "./_shared/clerk.ts";
 
 export default async function handler(request: Request): Promise<Response> {
     const corsResponse = handleCors(request);
     if (corsResponse) return corsResponse;
 
+    // Rate limiting - strict for admin endpoints
+    const rateLimit = await checkRateLimit(request, "admin");
+    const headers = rateLimitHeaders(rateLimit);
+
+    if (!rateLimit.allowed) {
+        return errorResponse("Too many requests", 429, "RATE_LIMITED", request, headers);
+    }
+
     if (request.method !== "POST") {
-        return errorResponse("Method not allowed", 405);
+        return errorResponse("Method not allowed", 405, "METHOD_NOT_ALLOWED", request, headers);
     }
 
-    // 1. Verify Authentication (Supabase JWT)
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader) {
-        return errorResponse("Missing Authorization header", 401);
-    }
+    // Verify admin status using proper Clerk JWT verification
+    const admin = await verifyAdminRequest(request);
 
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = getSupabase();
-
-    // Verify JWT using Supabase
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-        return errorResponse("Invalid Token", 401);
-    }
-
-    // 2. Verify Admin Status
-    const ownerEmail = Deno.env.get("OWNER_EMAIL");
-    if (!ownerEmail) {
-        console.error("Missing OWNER_EMAIL env var");
-        return errorResponse("Server configuration error", 500);
-    }
-
-    if (!user.email || user.email.toLowerCase() !== ownerEmail.toLowerCase()) {
-        return errorResponse("Forbidden: Admins only", 403);
+    if (!admin) {
+        return errorResponse("Forbidden: Admins only", 403, "FORBIDDEN", request, headers);
     }
 
     try {
-        const { email } = await request.json();
-        if (!email) return errorResponse("Email required", 400);
+        const body = await request.json();
+        const email = validateEmail(body.email);
 
-        // 3. Perform Admin Action using Service Role (Bypass RLS)
-        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        console.log("[Admin] Service Role Key present:", !!serviceRoleKey);
-
-        if (!serviceRoleKey) {
-            console.error("Missing SUPABASE_SERVICE_ROLE_KEY");
-            return errorResponse("Server configuration error", 500);
+        if (!email) {
+            return errorResponse("Valid email required", 400, "INVALID_EMAIL", request, headers);
         }
 
-        const supabaseUrl = Deno.env.get("NEXT_PUBLIC_SUPABASE_URL");
-        console.log("[Admin] Supabase URL:", supabaseUrl);
-
-        const supabaseAdmin = createClient(
-            supabaseUrl!,
-            serviceRoleKey
-        );
-
-        console.log("[Admin] Attempting to insert:", email);
-        const { error } = await supabaseAdmin
-            .from("allowed_users")
-            .insert([{ email: email.toLowerCase(), is_active: true }]);
-
-
-
-        if (error) {
-            // Ignore duplicate error
-            if (error.code === '23505') {
-                return jsonResponse({ success: true, message: "User already exists" });
-            }
-            throw error;
+        // Check if user already exists
+        const exists = await isUserAllowed(email);
+        if (exists) {
+            return jsonResponse({ success: true, message: "User already exists" }, request, 200, headers);
         }
 
-        return jsonResponse({ success: true });
+        // Add user to allowed list
+        const result = await addAllowedUser(email, body.notes);
 
+        console.log(`[Admin] User ${admin.userId} added allowed user: ${email}`);
+
+        return jsonResponse({ success: true, id: result.id }, request, 200, headers);
     } catch (err) {
         console.error("[Admin] Error:", err);
-        return errorResponse("Failed to add user", 500);
+        return errorResponse("Failed to add user", 500, "SERVER_ERROR", request, headers);
     }
 }

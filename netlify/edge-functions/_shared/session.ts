@@ -1,7 +1,7 @@
 // Simple signed cookie session
 // Stores spotify_user_id in a signed cookie
 
-const COOKIE_NAME = "pomodoro_session";
+export const COOKIE_NAME = "pomodoro_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function getSecret(): string {

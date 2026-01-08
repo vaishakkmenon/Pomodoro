@@ -1,58 +1,81 @@
 // Standard CORS headers for edge functions
 // Note: Access-Control-Allow-Origin cannot be '*' when credentials are included
+
+const ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://pomodoro.vaishakmenon.com",
+];
+
+const DEFAULT_ORIGIN = "https://pomodoro.vaishakmenon.com";
+
 export const corsHeaders = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Credentials": "true",
 };
 
-export function handleCors(request: Request): Response | null {
+/**
+ * Get the allowed origin from request
+ */
+export function getAllowedOrigin(request: Request): string {
     const origin = request.headers.get("Origin");
-    const allowedOrigins = [
-        "http://localhost:3000",
-        "https://pomodoro.vaishakmenon.com",
-        // Add other allowed domains if necessary
-    ];
+    return origin && ALLOWED_ORIGINS.includes(origin) ? origin : DEFAULT_ORIGIN;
+}
 
-    // If origin is allowed, add it to headers. Otherwise default to the production domain.
-    const allowOrigin = origin && allowedOrigins.includes(origin)
-        ? origin
-        : "https://pomodoro.vaishakmenon.com";
+/**
+ * Get CORS headers for a specific request
+ */
+export function corsHeadersForRequest(request: Request): Record<string, string> {
+    return {
+        ...corsHeaders,
+        "Access-Control-Allow-Origin": getAllowedOrigin(request),
+    };
+}
 
+/**
+ * Handle CORS preflight requests
+ */
+export function handleCors(request: Request): Response | null {
     if (request.method === "OPTIONS") {
         return new Response(null, {
             status: 204,
-            headers: {
-                ...corsHeaders,
-                "Access-Control-Allow-Origin": allowOrigin,
-            }
+            headers: corsHeadersForRequest(request),
         });
     }
-    return null; // For non-OPTIONS requests, you'll need to append the header manually or use a wrapper
+    return null;
 }
 
-export function jsonResponse(data: unknown, status = 200, headers: HeadersInit = {}): Response {
-    // We can't easily get the request origin here without passing the request object. 
-    // For simplicity in this helper, we'll need to rely on the caller or default to prod validation.
-    // However, since handleCors handles the preflight, the actual response also needs the CORS headers.
-
-    // A safer pattern for the response helper given the dynamic origin requirement:
-    // Ideally, we should pass the origin or the request. 
-    // To minimize refactoring, let's just use the production domain as default safe fallback,
-    // but this might break local dev if not handled. 
-    // Let's modify jsonResponse to accept custom headers that override.
+/**
+ * Create a JSON response with CORS headers
+ */
+export function jsonResponse(
+    data: unknown,
+    request?: Request,
+    status = 200,
+    extraHeaders: Record<string, string> = {}
+): Response {
+    const origin = request ? getAllowedOrigin(request) : DEFAULT_ORIGIN;
 
     return new Response(JSON.stringify(data), {
         status,
         headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "https://pomodoro.vaishakmenon.com", // Default safe
-            ...headers,
+            "Access-Control-Allow-Origin": origin,
+            ...extraHeaders,
         },
     });
 }
 
-export function errorResponse(message: string, status = 500, code?: string): Response {
-    return jsonResponse({ error: message, code }, status);
+/**
+ * Create an error JSON response
+ */
+export function errorResponse(
+    message: string,
+    status = 500,
+    code?: string,
+    request?: Request,
+    extraHeaders: Record<string, string> = {}
+): Response {
+    return jsonResponse({ error: message, code }, request, status, extraHeaders);
 }

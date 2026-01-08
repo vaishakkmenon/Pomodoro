@@ -1,72 +1,64 @@
 import { handleCors, jsonResponse, errorResponse } from "./_shared/cors.ts";
 import { getSession } from "./_shared/session.ts";
-import { getSupabase } from "./_shared/supabase.ts";
+import { getAppUserBySpotifyId, getSpotifyPreferences, checkPremiumStatus } from "./_shared/neon.ts";
 import {
     getValidAccessToken,
     startPlayback,
     pausePlayback,
     setVolume,
 } from "./_shared/spotify.ts";
-
-type TimerState = "FOCUS" | "BREAK" | "PAUSED";
+import { checkRateLimit, rateLimitHeaders } from "./_shared/rateLimit.ts";
+import { validateTimerState, type TimerState } from "./_shared/validation.ts";
 
 export default async function handler(request: Request): Promise<Response> {
     // Handle CORS preflight
     const corsResponse = handleCors(request);
     if (corsResponse) return corsResponse;
 
+    // Rate limiting
+    const rateLimit = await checkRateLimit(request, "sync");
+    const headers = rateLimitHeaders(rateLimit);
+
+    if (!rateLimit.allowed) {
+        return errorResponse("Too many requests", 429, "RATE_LIMITED", request, headers);
+    }
+
     if (request.method !== "POST") {
-        return errorResponse("Method not allowed", 405);
+        return errorResponse("Method not allowed", 405, "METHOD_NOT_ALLOWED", request, headers);
     }
 
     // Get session
     const spotifyUserId = await getSession(request);
     if (!spotifyUserId) {
-        return errorResponse("Unauthorized", 401, "NO_SESSION");
-    }
-
-    // Verify Premium Link
-    const supabase = getSupabase();
-    const { data: linkedUser } = await supabase
-        .from("users")
-        .select("email")
-        .eq("spotify_user_id", spotifyUserId)
-        .single();
-
-    if (!linkedUser) {
-        return errorResponse("Spotify account not linked", 401, "NOT_LINKED");
-    }
-
-    const { data: isPremium } = await supabase
-        .from("allowed_users")
-        .select("is_active")
-        .eq("email", linkedUser.email.toLowerCase())
-        .single();
-
-    if (!isPremium?.is_active) {
-        return errorResponse("Premium access revoked", 403, "NOT_PREMIUM");
+        return errorResponse("Unauthorized", 401, "NO_SESSION", request, headers);
     }
 
     try {
+        // Verify Premium Link
+        const linkedUser = await getAppUserBySpotifyId(spotifyUserId);
+        if (!linkedUser) {
+            return errorResponse("Spotify account not linked", 401, "NOT_LINKED", request, headers);
+        }
+
+        const isPremium = await checkPremiumStatus(linkedUser.email);
+        if (!isPremium) {
+            return errorResponse("Premium access revoked", 403, "NOT_PREMIUM", request, headers);
+        }
+
         // Parse and validate request body
         const body = await request.json();
-        const state = body.state as TimerState;
+        const state = validateTimerState(body.state);
 
-        if (!["FOCUS", "BREAK", "PAUSED"].includes(state)) {
-            return errorResponse("Invalid state", 400, "INVALID_STATE");
+        if (!state) {
+            return errorResponse("Invalid state", 400, "INVALID_STATE", request, headers);
         }
 
         // Get user preferences
-        const supabase = getSupabase();
-        const { data: prefs } = await supabase
-            .from("spotify_preferences")
-            .select("*")
-            .eq("spotify_user_id", spotifyUserId)
-            .single();
+        const prefs = await getSpotifyPreferences(spotifyUserId);
 
         // Skip if auto-play not enabled
         if (!prefs || !prefs.auto_play_enabled) {
-            return jsonResponse({ success: true, skipped: true, reason: "Auto-play not enabled" });
+            return jsonResponse({ success: true, skipped: true, reason: "Auto-play not enabled" }, request, 200, headers);
         }
 
         // Get valid access token
@@ -80,10 +72,7 @@ export default async function handler(request: Request): Promise<Response> {
                     await startPlayback(accessToken, prefs.focus_playlist_uri);
                     await setVolume(accessToken, prefs.volume_focus);
                 } else {
-                    // No focus playlist set, just ensure volume is correct if playing, or do nothing?
-                    // Review says: "FOCUS with no playlist does nothing silently".
-                    // Let's log it or return info.
-                    return jsonResponse({ success: true, skipped: true, reason: "No focus playlist set" });
+                    return jsonResponse({ success: true, skipped: true, reason: "No focus playlist set" }, request, 200, headers);
                 }
                 break;
 
@@ -101,7 +90,7 @@ export default async function handler(request: Request): Promise<Response> {
                 break;
         }
 
-        return jsonResponse({ success: true, state });
+        return jsonResponse({ success: true, state }, request, 200, headers);
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
 
@@ -109,20 +98,22 @@ export default async function handler(request: Request): Promise<Response> {
             return errorResponse(
                 "No active Spotify device. Open Spotify and try again.",
                 404,
-                "NO_DEVICE"
+                "NO_DEVICE",
+                request,
+                headers
             );
         }
 
         if (message === "NO_ACCOUNT" || message === "TOKEN_EXPIRED") {
-            return errorResponse("Session expired, please reconnect Spotify", 401, message);
+            return errorResponse("Session expired, please reconnect Spotify", 401, message, request, headers);
         }
 
         if (message.startsWith("SPOTIFY_ERROR:")) {
             const [, status, spotifyMessage] = message.split(":");
-            return errorResponse(spotifyMessage || "Spotify error", parseInt(status) || 500);
+            return errorResponse(spotifyMessage || "Spotify error", parseInt(status) || 500, "SPOTIFY_ERROR", request, headers);
         }
 
         console.error("[Sync] Error:", err);
-        return errorResponse("Sync failed", 500);
+        return errorResponse("Sync failed", 500, "SERVER_ERROR", request, headers);
     }
 }

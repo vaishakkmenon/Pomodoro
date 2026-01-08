@@ -1,4 +1,4 @@
-import { getSupabase, type SpotifyAccount } from "./supabase.ts";
+import { getSpotifyAccount, updateSpotifyTokens } from "./neon.ts";
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -111,20 +111,14 @@ async function refreshAccessToken(refreshToken: string): Promise<{
 export async function getValidAccessToken(spotifyUserId: string): Promise<string> {
     // Note: Race condition possible here if multiple requests try to refresh token simultaneously.
     // In a production app, we might want to use a distributed lock or queue.
-    const supabase = getSupabase();
+    const account = await getSpotifyAccount(spotifyUserId);
 
-    const { data: account, error } = await supabase
-        .from("spotify_accounts")
-        .select("*")
-        .eq("spotify_user_id", spotifyUserId)
-        .single();
-
-    if (error || !account) {
+    if (!account || !account.access_token || !account.refresh_token) {
         throw new Error("NO_ACCOUNT");
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const isExpired = now >= account.expires_at - 300; // 5 min buffer
+    const isExpired = account.expires_at ? now >= account.expires_at - 300 : true; // 5 min buffer
 
     if (!isExpired) {
         return account.access_token;
@@ -137,14 +131,12 @@ export async function getValidAccessToken(spotifyUserId: string): Promise<string
     const newExpiresAt = now + tokens.expires_in;
 
     // Update database
-    await supabase
-        .from("spotify_accounts")
-        .update({
-            access_token: tokens.access_token,
-            expires_at: newExpiresAt,
-            ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
-        })
-        .eq("spotify_user_id", spotifyUserId);
+    await updateSpotifyTokens(
+        spotifyUserId,
+        tokens.access_token,
+        newExpiresAt,
+        tokens.refresh_token
+    );
 
     return tokens.access_token;
 }
