@@ -31,11 +31,11 @@ export default clerkMiddleware(async (auth, req) => {
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://js.clerk.dev https://challenges.cloudflare.com https://www.youtube.com https://s.ytimg.com;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.pomodoro.vaishakmenon.com https://*.clerk.accounts.dev https://js.clerk.dev https://challenges.cloudflare.com https://www.youtube.com https://s.ytimg.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     img-src 'self' data: blob: https://*.spotifycdn.com https://i.scdn.co https://img.clerk.com https://*.clerk.com https://i.ytimg.com https://*.ytimg.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev https://api.spotify.com wss://*.neon.tech https://cdn.jsdelivr.net https://unpkg.com;
+    connect-src 'self' https://clerk.pomodoro.vaishakmenon.com https://*.clerk.accounts.dev https://*.clerk.dev https://api.spotify.com wss://*.neon.tech https://cdn.jsdelivr.net https://unpkg.com;
     frame-src 'self' https://*.spotify.com https://challenges.cloudflare.com https://www.youtube.com https://youtube.com;
     media-src 'self' blob:;
     worker-src 'self' blob:;
