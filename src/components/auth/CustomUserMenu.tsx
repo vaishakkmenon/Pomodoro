@@ -7,14 +7,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePremium } from "@/hooks/usePremium";
 
-export function CustomUserMenu() {
+interface CustomUserMenuProps {
+    isOwner?: boolean;
+}
+
+export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
     const { user, isLoaded } = useUser();
     const { signOut, openSignIn } = useClerk();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const { isPremium } = usePremium();
-
-    const isOwner = user?.primaryEmailAddress?.emailAddress === process.env.NEXT_PUBLIC_OWNER_EMAIL;
 
     // Close on click outside
     useEffect(() => {
