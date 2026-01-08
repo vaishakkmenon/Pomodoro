@@ -16,6 +16,7 @@ interface MediaDockProps {
     onToggleWide: () => void;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
+    isTimerMenuOpen?: boolean;
 }
 
 export function MediaDock({
@@ -24,9 +25,15 @@ export function MediaDock({
     isWide,
     onToggleWide,
     isOpen,
-    onOpenChange
+    onOpenChange,
+    isTimerMenuOpen = false
 }: MediaDockProps) {
     const [activeTab, setActiveTab] = useState<Tab>("youtube");
+
+    // Dynamic sizing based on visibility of Timer Menu
+    // If Timer Menu is OPEN (Timer uses ~36rem), we use 55vw (smaller).
+    // If Timer Menu is CLOSED (Timer uses ~32rem), we use 60vw (larger).
+    const expandedWidth = isTimerMenuOpen ? "55vw" : "60vw";
 
 
     const toggleOpen = () => onOpenChange(!isOpen);
@@ -59,14 +66,15 @@ export function MediaDock({
         <AnimatePresence>
             {settings.media?.enabled && (
                 <motion.div
-                    initial={{ opacity: 0, width: 60, height: 225 }}
+                    layout
+                    initial={{ opacity: 0, width: "60px", height: "225px" }}
                     animate={{
                         opacity: 1,
-                        width: !isOpen ? 62 : isWide ? "65vw" : "30vw",
-                        height: !isOpen ? 285 : isWide ? "80vh" : "50vh",
+                        width: !isOpen ? "60px" : isWide ? expandedWidth : "30vw",
+                        height: !isOpen ? "285px" : isWide ? "70vh" : "50vh",
                     }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                    transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+                    transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
                     className={cx(
                         // Base layout
                         "z-40 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex",
@@ -74,7 +82,7 @@ export function MediaDock({
                         // Positioning Logic
                         (isOpen && isWide)
                             ? "fixed left-4 top-1/2 -translate-y-1/2" // Wide Mode: Fixed to viewport left
-                            : "fixed left-4 top-1/2 -translate-y-1/2 md:absolute md:left-auto md:right-full md:mr-6" // Normal (Open or Closed): Absolute anchored to Timer
+                            : "fixed left-4 top-1/2 -translate-y-1/2 md:absolute md:left-auto md:right-full md:mr-3" // Normal (Open or Closed): Absolute anchored to Timer
                     )}
                 >
                     {/* Content Area */}

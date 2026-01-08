@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pill } from "./Pill";
+import { pill } from "./styles";
 
 describe("pill", () => {
     it("includes base pill classes", () => {

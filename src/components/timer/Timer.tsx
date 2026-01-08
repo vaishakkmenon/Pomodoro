@@ -33,10 +33,25 @@ interface TimerProps {
     updateSettings: (s: Partial<Settings>) => void;
     primeAudio?: () => void;
     globalProgress?: number | null;
+    isMenuOpen?: boolean;
+    onMenuOpenChange?: (open: boolean) => void;
 }
 
-export default function Timer({ timer, settings, updateSettings, primeAudio = () => { }, globalProgress = null }: TimerProps) {
+export default function Timer({
+    timer,
+    settings,
+    updateSettings,
+    primeAudio = () => { },
+    globalProgress = null,
+    isMenuOpen,
+    onMenuOpenChange
+}: TimerProps) {
     const [settingsOpen, setSettingsOpen] = useState(false);
+
+    // Local state fallback if not controlled (for backward compatibility/safety)
+    const [localMenuOpen, setLocalMenuOpen] = useState(false);
+    const menuOpen = isMenuOpen ?? localMenuOpen;
+    const setMenuOpen = onMenuOpenChange ?? setLocalMenuOpen;
 
     // Request notification permission if enabled in settings
     useEffect(() => {
@@ -60,7 +75,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
         setSyncCallback(syncPlayback);
     }, [setSyncCallback, syncPlayback]);
 
-    const [menuOpen, setMenuOpen] = useState(false);
+
     // Spotify menu toggle
     const [spotifyOpen, setSpotifyOpen] = useState(false);
 
@@ -110,7 +125,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
     const chipText = `${LABELS[tab]}${isDone ? " — Finished" : isRunning ? "" : " — Paused"}`;
     const startDisabled = isDone && !isRunning;
     const resetDisabled = atFull;
-    const cardMax = menuOpen ? "max-w-[min(90vw,36rem)]" : "max-w-[min(90vw,32rem)]";
+    const cardWidth = menuOpen ? "w-[min(90vw,36rem)]" : "w-[min(90vw,32rem)]";
 
     const chipAccent = isDone
         ? "text-white/80 ring-white/20"
@@ -221,9 +236,9 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
     const specificPhase = tab === "study" ? "study" : tab === "short" ? "shortBreak" : "longBreak";
 
     return (
-        <div className="flex flex-col gap-4 items-center w-full">
+        <div className={cx("flex flex-col gap-4 items-center transition-[width] duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none", cardWidth)}>
             {/* Integrated Progress Bar - Floating above */}
-            <div className={cx("w-full transition-[max-width] duration-700 ease-in-out motion-reduce:transition-none", cardMax)}>
+            <div className="w-full">
                 <ProgressBar
                     secondsLeft={progressProps.secondsLeft}
                     totalDuration={progressProps.totalDuration}
@@ -236,8 +251,7 @@ export default function Timer({ timer, settings, updateSettings, primeAudio = ()
             <div
                 className={cx(
                     "relative w-full rounded-2xl border backdrop-blur p-6",
-                    "transition-[max-width,background-color,border-color] duration-700 ease-in-out motion-reduce:transition-none",
-                    cardMax
+                    "transition-[background-color,border-color] duration-700 ease-in-out motion-reduce:transition-none"
                 )}
                 style={{
                     backgroundColor: "var(--bg-card-overlay)",

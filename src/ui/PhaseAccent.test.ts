@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { phaseAccent } from "./PhaseAccent";
+import { phaseAccent } from "./styles";
 
 describe("phaseAccent", () => {
     it("returns danger classes for danger accent", () => {

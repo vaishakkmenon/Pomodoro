@@ -51,9 +51,11 @@ export function AmbientPlayer() {
     }, [states]);
 
     // Cleanup on unmount
+    // Cleanup on unmount
     useEffect(() => {
+        const refs = audioRefs.current;
         return () => {
-            Object.values(audioRefs.current).forEach(audio => {
+            Object.values(refs).forEach(audio => {
                 audio.pause();
                 audio.src = "";
             });

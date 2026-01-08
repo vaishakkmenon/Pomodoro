@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { motion } from "framer-motion";
 import { cx } from "@/ui/cx";
 import Timer from "@/components/timer/Timer";
 import { SpotifyErrorHandler } from "@/components/spotify/SpotifyErrorHandler";
@@ -36,6 +37,7 @@ export default function Home() {
     // Media State
     const [isMediaWide, setIsMediaWide] = useState(false);
     const [isMediaOpen, setIsMediaOpen] = useState(false);
+    const [timerMenuOpen, setTimerMenuOpen] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
 
     // Audio
@@ -145,15 +147,24 @@ export default function Home() {
                 onDismiss={() => setShowCelebration(false)}
             />
 
-            <main
+            <motion.main
+                initial={{ paddingLeft: "0rem" }}
+                animate={{
+                    paddingLeft: isMediaWide && isMediaOpen && settings.media?.enabled
+                        ? (timerMenuOpen ? "calc(55vw + 1.5rem)" : "calc(60vw + 1.5rem)")
+                        : "0rem"
+                }}
+                transition={{
+                    duration: 0.5,
+                    ease: [0.25, 1, 0.5, 1]
+                }}
                 className={cx(
-                    "min-h-screen w-screen relative flex flex-col items-center justify-center py-10 text-[var(--text-primary)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
-                    isMediaWide && isMediaOpen && settings.media?.enabled ? "pl-[65vw]" : "pl-0"
+                    "min-h-screen w-screen relative flex flex-col items-center justify-center py-10 text-[var(--text-primary)]"
                 )}
             >
 
 
-                <div className="relative w-full max-w-[min(90vw,28rem)]">
+                <div className="relative">
                     <MediaDock
                         settings={settings}
                         updateSettings={updateSettings}
@@ -161,12 +172,15 @@ export default function Home() {
                         onToggleWide={() => setIsMediaWide(!isMediaWide)}
                         isOpen={isMediaOpen}
                         onOpenChange={setIsMediaOpen}
+                        isTimerMenuOpen={timerMenuOpen}
                     />
                     <Timer
                         timer={timerState}
                         settings={settings}
                         updateSettings={updateSettings}
                         globalProgress={globalProgress}
+                        isMenuOpen={timerMenuOpen}
+                        onMenuOpenChange={setTimerMenuOpen}
                     />
                 </div>
 
@@ -176,7 +190,19 @@ export default function Home() {
                         activeTaskId={activeTaskId}
                         addTask={addTask}
                         deleteTask={deleteTask}
-                        toggleTask={toggleTask}
+                        toggleTask={(id) => {
+                            const task = tasks.find(t => t.id === id);
+                            if (task && !task.isComplete) {
+                                // We are about to mark it complete.
+                                // Check if all OTHER tasks are already complete.
+                                const otherTasks = tasks.filter(t => t.id !== id);
+                                const allOthersComplete = otherTasks.every(t => t.isComplete);
+                                if (allOthersComplete) {
+                                    setShowCelebration(true);
+                                }
+                            }
+                            toggleTask(id);
+                        }}
                         setActiveTask={setActiveTask}
                         updateTaskEstimate={updateTaskEstimate}
                     />
@@ -185,7 +211,7 @@ export default function Home() {
                 <Suspense fallback={null}>
                     <SpotifyErrorHandler />
                 </Suspense>
-            </main>
+            </motion.main>
         </>
     );
 }
