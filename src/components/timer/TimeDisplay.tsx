@@ -74,6 +74,7 @@ export default function TimeDisplay({ secondsLeft, onTimeChange, onPause }: Prop
             inputMode="numeric"
             aria-label="Edit timer (MM:SS or digits like 2530)"
             placeholder="MM:SS"
+            name="timer-input"
         />
     );
 }

@@ -167,7 +167,8 @@ export function ThemeSelector() {
                                             }
                                             if (e.key === "Escape") setIsNaming(false);
                                         }}
-                                        className="flex-1 bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--text-primary)]/30 placeholder:text-[var(--text-primary)]/30"
+                                        className="flex-1 bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] text-center font-mono focus:outline-none focus:border-[var(--text-primary)]/30 placeholder:text-[var(--text-primary)]/30"
+                                        aria-label="Theme Name"
                                     />
                                     <button
                                         onClick={() => {

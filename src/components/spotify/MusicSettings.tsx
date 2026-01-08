@@ -92,8 +92,9 @@ export function MusicSettings() {
             <h2 className="text-xl font-semibold">Music Settings</h2>
 
             {/* Auto-DJ Toggle */}
-            <label className="flex items-center gap-3 cursor-pointer">
+            <label htmlFor="auto-dj-toggle" className="flex items-center gap-3 cursor-pointer">
                 <input
+                    id="auto-dj-toggle"
                     type="checkbox"
                     checked={preferences.auto_play_enabled}
                     onChange={(e) =>
@@ -108,8 +109,9 @@ export function MusicSettings() {
                 <>
                     {/* Focus Playlist */}
                     <div className="space-y-2">
-                        <label className="block font-medium">Focus Playlist</label>
+                        <label htmlFor="focus-playlist" className="block font-medium">Focus Playlist</label>
                         <select
+                            id="focus-playlist"
                             value={preferences.focus_playlist_uri || ""}
                             onChange={(e) =>
                                 setPreferences((p) => ({
@@ -130,8 +132,9 @@ export function MusicSettings() {
 
                     {/* Break Playlist */}
                     <div className="space-y-2">
-                        <label className="block font-medium">Break Playlist</label>
+                        <label htmlFor="break-playlist" className="block font-medium">Break Playlist</label>
                         <select
+                            id="break-playlist"
                             value={preferences.break_playlist_uri || ""}
                             onChange={(e) =>
                                 setPreferences((p) => ({
@@ -152,10 +155,11 @@ export function MusicSettings() {
 
                     {/* Volume Sliders */}
                     <div className="space-y-2">
-                        <label className="block font-medium">
+                        <label htmlFor="focus-volume" className="block font-medium">
                             Focus Volume: {preferences.volume_focus}%
                         </label>
                         <input
+                            id="focus-volume"
                             type="range"
                             min="0"
                             max="100"
@@ -171,10 +175,11 @@ export function MusicSettings() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block font-medium">
+                        <label htmlFor="break-volume" className="block font-medium">
                             Break Volume: {preferences.volume_break}%
                         </label>
                         <input
+                            id="break-volume"
                             type="range"
                             min="0"
                             max="100"
@@ -196,10 +201,10 @@ export function MusicSettings() {
                 onClick={handleSave}
                 disabled={isSaving}
                 className={`w-full py-2 rounded font-medium transition-colors ${saveStatus === "success"
-                        ? "bg-green-500 text-white"
-                        : saveStatus === "error"
-                            ? "bg-red-500 text-white"
-                            : "bg-[#1DB954] hover:bg-[#1ed760] text-white"
+                    ? "bg-green-500 text-white"
+                    : saveStatus === "error"
+                        ? "bg-red-500 text-white"
+                        : "bg-[#1DB954] hover:bg-[#1ed760] text-white"
                     } disabled:opacity-50 cursor-pointer`}
             >
                 {isSaving

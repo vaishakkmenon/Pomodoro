@@ -141,6 +141,7 @@ export function AmbientPlayer() {
                                                     toggleSound(sound.id);
                                                 }
                                             }}
+                                            aria-label={`${sound.label} volume`}
                                             className="flex-1 h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/50 hover:[&::-webkit-slider-thumb]:bg-white transition-all"
                                         />
                                         <Volume2 className="w-3 h-3 text-white/20" />

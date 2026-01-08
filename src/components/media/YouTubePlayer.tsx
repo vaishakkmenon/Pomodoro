@@ -32,6 +32,7 @@ export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps)
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder="Paste YouTube URL..."
+                        aria-label="YouTube URL"
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/30"
                     />
                 </form>

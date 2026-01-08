@@ -141,8 +141,9 @@ export function SettingsModal({
                                         </div>
                                         <div className="grid grid-cols-3 gap-4">
                                             <div className="space-y-2">
-                                                <label className="text-xs text-[var(--text-primary)]/50">Focus ({inputInSeconds ? "sec" : "min"})</label>
+                                                <label htmlFor="work-duration" className="text-xs text-[var(--text-primary)]/50">Focus ({inputInSeconds ? "sec" : "min"})</label>
                                                 <SmartNumberInput
+                                                    id="work-duration"
                                                     min={inputInSeconds ? 5 : 0.1}
                                                     max={inputInSeconds ? 7200 : 120}
                                                     step={inputInSeconds ? 1 : 0.5}
@@ -154,8 +155,9 @@ export function SettingsModal({
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs text-[var(--text-primary)]/50">Short Break ({inputInSeconds ? "sec" : "min"})</label>
+                                                <label htmlFor="short-break-duration" className="text-xs text-[var(--text-primary)]/50">Short Break ({inputInSeconds ? "sec" : "min"})</label>
                                                 <SmartNumberInput
+                                                    id="short-break-duration"
                                                     min={inputInSeconds ? 5 : 0.1}
                                                     max={inputInSeconds ? 3600 : 60}
                                                     step={inputInSeconds ? 1 : 0.5}
@@ -167,8 +169,9 @@ export function SettingsModal({
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs text-[var(--text-primary)]/50">Long Break ({inputInSeconds ? "sec" : "min"})</label>
+                                                <label htmlFor="long-break-duration" className="text-xs text-[var(--text-primary)]/50">Long Break ({inputInSeconds ? "sec" : "min"})</label>
                                                 <SmartNumberInput
+                                                    id="long-break-duration"
                                                     min={inputInSeconds ? 5 : 0.1}
                                                     max={inputInSeconds ? 3600 : 60}
                                                     step={inputInSeconds ? 1 : 0.5}
@@ -189,16 +192,18 @@ export function SettingsModal({
                                             <h3>Behavior</h3>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <label className="text-sm text-[var(--text-primary)]/60">Auto-start Timer</label>
+                                            <span className="text-sm text-[var(--text-primary)]/60">Auto-start Timer</span>
                                             <Toggle
                                                 checked={localSettings.autoStart}
                                                 onChange={(checked) => updateBehavior("autoStart", checked)}
+                                                label="Auto-start Timer"
                                             />
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <label className="text-sm text-[var(--text-primary)]/60">Long Break Interval</label>
+                                            <label htmlFor="long-break-interval" className="text-sm text-[var(--text-primary)]/60">Long Break Interval</label>
                                             <div className="flex items-center gap-3 bg-[var(--text-primary)]/5 rounded-lg p-1">
                                                 <input
+                                                    id="long-break-interval"
                                                     type="number"
                                                     min="1"
                                                     max="10"
@@ -220,6 +225,7 @@ export function SettingsModal({
                                             <Toggle
                                                 checked={localSettings.sound.enabled}
                                                 onChange={(checked) => updateSound("enabled", checked)}
+                                                label="Enable Sound"
                                             />
                                         </div>
 
@@ -228,8 +234,9 @@ export function SettingsModal({
                                             localSettings.sound.enabled ? "opacity-100 max-h-20" : "opacity-30 max-h-0 pointer-events-none"
                                         )}>
                                             <div className="flex items-center gap-4">
-                                                <span className="text-xs text-[var(--text-primary)]/50 w-12">Volume</span>
+                                                <label htmlFor="volume-slider" className="text-xs text-[var(--text-primary)]/50 w-12">Volume</label>
                                                 <input
+                                                    id="volume-slider"
                                                     type="range"
                                                     min="0"
                                                     max="1"
@@ -237,6 +244,7 @@ export function SettingsModal({
                                                     value={localSettings.sound.volume}
                                                     onChange={(e) => updateSound("volume", parseFloat(e.target.value))}
                                                     className="flex-1 h-1.5 bg-[var(--text-primary)]/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--text-primary)]"
+                                                    aria-label="Volume"
                                                 />
                                                 <span className="text-xs text-[var(--text-primary)]/50 w-8 text-right">
                                                     {Math.round(localSettings.sound.volume * 100)}%
@@ -254,6 +262,7 @@ export function SettingsModal({
                                             <Toggle
                                                 checked={localSettings.media?.enabled ?? true}
                                                 onChange={(checked) => updateMedia(checked)}
+                                                label="Enable Media Dock"
                                             />
                                         </div>
                                     </section>
@@ -268,6 +277,7 @@ export function SettingsModal({
                                             <Toggle
                                                 checked={localSettings.notifications.enabled}
                                                 onChange={(checked) => updateNotifications(checked)}
+                                                label="Enable Notifications"
                                             />
                                         </div>
                                         {localSettings.notifications.enabled && (
@@ -332,7 +342,8 @@ function SmartNumberInput({
     min,
     max,
     step = 1,
-    className
+    className,
+    id
 }: {
     value: number;
     onChange: (val: number) => void;
@@ -340,6 +351,7 @@ function SmartNumberInput({
     max?: number;
     step?: number;
     className?: string;
+    id?: string;
 }) {
     const [strVal, setStrVal] = useState(String(value));
     const prevValueRef = useRef(value);
@@ -385,6 +397,7 @@ function SmartNumberInput({
 
     return (
         <input
+            id={id}
             type="number"
             min={min}
             max={max}
@@ -397,12 +410,13 @@ function SmartNumberInput({
     );
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label?: string }) {
     return (
         <button
             type="button"
             role="switch"
             aria-checked={checked}
+            aria-label={label}
             onClick={() => onChange(!checked)}
             className={cx(
                 "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-primary)]/75",

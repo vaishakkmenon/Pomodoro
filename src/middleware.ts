@@ -23,21 +23,22 @@ export default clerkMiddleware(async (auth, req) => {
   // 2. Add Security Headers
   const response = NextResponse.next();
 
-  // Content Security Policy (Basic)
-  // We need to allow scripts from: 'self', 'unsafe-inline' (Next.js needs it often or we need nonces), 
-  // clerk.com, spotify.com, maybe others.
-  // For now, let's start with a reasonably strict policy but allow 'unsafe-inline' for styles/scripts to avoid breaking Next.js app router 
-  // until we have nonces set up properly (which is complex).
-  // Frame-ancestors: deny to prevent clickjacking (unless we need to be iframed).
+  // Content Security Policy
+  // We disable CSP in development to avoid issues with Hot Module Replacement and other dev tools
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.next();
+  }
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://clerk.com https://*.spotify.com;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://js.clerk.dev https://challenges.cloudflare.com https://www.youtube.com https://s.ytimg.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' data: https://*.spotifycdn.com https://i.scdn.co https://img.clerk.com;
+    img-src 'self' data: blob: https://*.spotifycdn.com https://i.scdn.co https://img.clerk.com https://*.clerk.com https://i.ytimg.com https://*.ytimg.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.clerk.accounts.dev https://clerk.com https://api.spotify.com;
-    frame-src 'self' https://*.spotify.com;
+    connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev https://api.spotify.com wss://*.neon.tech https://cdn.jsdelivr.net https://unpkg.com;
+    frame-src 'self' https://*.spotify.com https://challenges.cloudflare.com https://www.youtube.com https://youtube.com;
+    media-src 'self' blob:;
+    worker-src 'self' blob:;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -53,7 +54,7 @@ export default clerkMiddleware(async (auth, req) => {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=()');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   return response;
 });
@@ -61,7 +62,7 @@ export default clerkMiddleware(async (auth, req) => {
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|lottie|mp3|wav|ogg)).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',
   ],

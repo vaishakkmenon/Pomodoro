@@ -60,6 +60,7 @@ export function ColorPicker({ color, onChange, label }: ColorPickerProps) {
                             type="text"
                             value={color.toUpperCase()}
                             onChange={(e) => onChange(e.target.value)}
+                            aria-label="Hex color code"
                             className="w-full bg-[var(--text-primary)]/5 border border-[var(--text-primary)]/10 rounded px-2 py-1 text-xs text-[var(--text-primary)] text-center font-mono focus:outline-none focus:border-[var(--text-primary)]/30"
                         />
                     </div>

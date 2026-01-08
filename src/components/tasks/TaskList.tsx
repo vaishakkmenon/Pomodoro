@@ -132,6 +132,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                                     <input
                                         autoFocus
                                         type="text"
+                                        name="new-task-title"
                                         placeholder="What are you working on?"
                                         value={newTitle}
                                         onChange={(e) => setNewTitle(e.target.value)}
@@ -142,6 +143,7 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
                                             <span className="text-sm font-bold text-[var(--text-primary)]/60">Est Pomodoros</span>
                                             <input
                                                 type="number"
+                                                name="new-task-estimate"
                                                 min="1"
                                                 max="10"
                                                 value={estPomodoros}

@@ -50,6 +50,7 @@ export function TaskItem({ task, isActive, onToggle, onDelete, onSelect, onUpdat
 
             {/* Checkbox */}
             <button
+                aria-label={task.isComplete ? "Mark as incomplete" : "Mark as complete"}
                 onClick={(e) => {
                     e.stopPropagation();
                     onToggle(task.id);
@@ -82,6 +83,7 @@ export function TaskItem({ task, isActive, onToggle, onDelete, onSelect, onUpdat
                         autoFocus
                         type="text"
                         inputMode="numeric"
+                        aria-label="Edit pomodoro estimate"
                         value={editValue}
                         onChange={(e) => {
                             // Only allow digits
@@ -109,6 +111,7 @@ export function TaskItem({ task, isActive, onToggle, onDelete, onSelect, onUpdat
                         }}
                         className="hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/10 rounded px-1 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-primary)]/20"
                         title="Click to edit estimate"
+                        aria-label={`Edit estimate, current is ${task.estimatedPomodoros}`}
                     >
                         {task.estimatedPomodoros}
                     </button>
@@ -118,6 +121,7 @@ export function TaskItem({ task, isActive, onToggle, onDelete, onSelect, onUpdat
 
             {/* Delete Button (visible on hover) */}
             <button
+                aria-label="Delete task"
                 onClick={(e) => {
                     e.stopPropagation();
                     onDelete(task.id);
