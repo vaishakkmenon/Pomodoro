@@ -10,10 +10,10 @@ interface Sound {
 }
 
 const SOUNDS: Sound[] = [
-    { id: "rain", label: "Rain", icon: CloudRain, src: "/sounds/rain.mp3" },
-    { id: "forest", label: "Forest", icon: Trees, src: "/sounds/forest.mp3" },
-    { id: "cafe", label: "Cafe", icon: Coffee, src: "/sounds/cafe.mp3" },
-    { id: "fireplace", label: "Fireplace", icon: Flame, src: "/sounds/fireplace.mp3" },
+    { id: "rain", label: "Rain", icon: CloudRain, src: "/sounds/rain.mp3?v=2" },
+    { id: "forest", label: "Forest", icon: Trees, src: "/sounds/forest.mp3?v=2" },
+    { id: "cafe", label: "Cafe", icon: Coffee, src: "/sounds/cafe.mp3?v=2" },
+    { id: "fireplace", label: "Fireplace", icon: Flame, src: "/sounds/fireplace.mp3?v=2" },
 ];
 
 export function AmbientPlayer() {
@@ -51,13 +51,11 @@ export function AmbientPlayer() {
     }, [states]);
 
     // Cleanup on unmount
-    // Cleanup on unmount
     useEffect(() => {
         const refs = audioRefs.current;
         return () => {
             Object.values(refs).forEach(audio => {
                 audio.pause();
-                audio.src = "";
             });
         };
     }, []);

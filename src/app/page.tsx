@@ -148,11 +148,11 @@ export default function Home() {
             />
 
             <motion.main
-                initial={{ paddingLeft: "0rem" }}
+                initial={{ paddingLeft: "0vw" }}
                 animate={{
                     paddingLeft: isMediaWide && isMediaOpen && settings.media?.enabled
-                        ? (timerMenuOpen ? "calc(55vw + 1.5rem)" : "calc(60vw + 1.5rem)")
-                        : "0rem"
+                        ? (timerMenuOpen ? "55vw" : "60vw")
+                        : "0vw"
                 }}
                 transition={{
                     duration: 0.5,

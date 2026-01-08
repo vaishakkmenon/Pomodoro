@@ -8,6 +8,9 @@ import "./globals.css";
 export const metadata: Metadata = {
     title: "Pomodoro Timer",
     description: "A simple Pomodoro timer",
+    icons: {
+        icon: "/favicon.svg",
+    },
 };
 
 export default function RootLayout({
