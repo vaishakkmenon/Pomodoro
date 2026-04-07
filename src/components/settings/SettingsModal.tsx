@@ -85,7 +85,7 @@ export function SettingsModal({
                         transition={{ duration: 0.2, ease: "easeOut" }}
                         className="w-full max-w-md bg-[var(--bg-secondary)] border border-[var(--text-primary)]/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                     >
-                        <div className="flex items-center justify-between p-6 border-b border-[var(--text-primary)]/5">
+                        <div className="flex items-center justify-between p-4 md:p-6 border-b border-[var(--text-primary)]/5">
                             <h2 className="text-xl font-bold text-[var(--text-primary)]">Settings</h2>
                             <button
                                 onClick={onClose}
@@ -122,7 +122,7 @@ export function SettingsModal({
                             </button>
                         </div>
 
-                        <div className="overflow-y-auto p-6 space-y-8 flex-1">
+                        <div className="overflow-y-auto p-4 md:p-6 space-y-6 md:space-y-8 flex-1">
                             {activeTab === "general" && (
                                 <>
                                     {/* Timer Durations */}
@@ -139,7 +139,7 @@ export function SettingsModal({
                                                 {inputInSeconds ? "Switch to Minutes" : "Switch to Seconds"}
                                             </button>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-3 gap-2 md:gap-4">
                                             <div className="space-y-2">
                                                 <label htmlFor="work-duration" className="text-xs text-[var(--text-primary)]/50">Focus ({inputInSeconds ? "sec" : "min"})</label>
                                                 <SmartNumberInput

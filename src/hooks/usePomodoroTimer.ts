@@ -190,9 +190,11 @@ export function usePomodoroTimer(opts: Options = {}) {
             tickRef.current = null;
         }
         setIsRunning(false);
-        setSecondsLeft(durationMap[tab]);
-        // Sync: Pause music on reset
+        setTab("study");
+        setSecondsLeft(durationMap["study"]);
+        completedStudies.current = 0;
         syncRef.current?.("PAUSED");
+        localStorage.removeItem(PERSIST_KEY);
     };
 
     const switchTab = (t: Tab) => {
