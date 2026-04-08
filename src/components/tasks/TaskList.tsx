@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Task } from "@/types/task";
 import { TaskItem } from "./TaskItem";
 import { Plus } from "lucide-react";
@@ -25,13 +25,6 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
     const [newTitle, setNewTitle] = useState("");
     const [estPomodoros, setEstPomodoros] = useState(1);
 
-    // Force re-render periodically to update relative time
-    const [, setTick] = useState(0);
-    useEffect(() => {
-        const interval = setInterval(() => setTick(t => t + 1), 30000); // 30s update
-        return () => clearInterval(interval);
-    }, []);
-
     // Calculate Finish Time
     const incompleteTasks = tasks.filter(t => !t.isComplete);
     const totalRemainingPomodoros = incompleteTasks.reduce((acc, t) => acc + (t.estimatedPomodoros - t.completedPomodoros), 0);
@@ -41,7 +34,10 @@ export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask,
     // Ideally we add long breaks, but let's start simple.
     const totalMinutes = totalRemainingPomodoros * (workDuration + shortBreak);
 
-    const finishTime = new Date(Date.now() + totalMinutes * 60000);
+    const finishTime = useMemo(() => {
+        return new Date(Date.now() + totalMinutes * 60000);
+    }, [totalMinutes]);
+
     const calculatedTimeStr = finishTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
     // ... handleSubmit ...
