@@ -1,13 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Task } from "@/types/task";
 import { TaskItem } from "./TaskItem";
 import { Plus } from "lucide-react";
 import { cx } from "@/ui/cx";
 import { AnimatePresence, motion } from "framer-motion";
+import { useSettings } from "@/hooks/useSettings";
 
 interface TaskListProps {
     tasks: Task[];
     activeTaskId: string | null;
+    secondsLeft: number;
+    completedStudies: number;
     addTask: (title: string, estimatedPomodoros: number) => void;
     deleteTask: (id: string) => void;
     toggleTask: (id: string) => void;
@@ -15,28 +18,37 @@ interface TaskListProps {
     updateTaskEstimate: (id: string, n: number) => void;
 }
 
-// Add import at top
-import { useSettings } from "@/hooks/useSettings";
-
-export function TaskList({ tasks, activeTaskId, addTask, deleteTask, toggleTask, setActiveTask, updateTaskEstimate }: TaskListProps) {
+export function TaskList({ tasks, activeTaskId, secondsLeft, completedStudies, addTask, deleteTask, toggleTask, setActiveTask, updateTaskEstimate }: TaskListProps) {
     const { settings } = useSettings();
     const [isAdding, setIsAdding] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [newTitle, setNewTitle] = useState("");
     const [estPomodoros, setEstPomodoros] = useState(1);
 
-    // Calculate Finish Time
     const incompleteTasks = tasks.filter(t => !t.isComplete);
-    const totalRemainingPomodoros = incompleteTasks.reduce((acc, t) => acc + (t.estimatedPomodoros - t.completedPomodoros), 0);
-    const workDuration = settings.durations.work;
-    const shortBreak = settings.durations.shortBreak;
-    // Simple calc: (work + shortBreak) * remaining. 
-    // Ideally we add long breaks, but let's start simple.
-    const totalMinutes = totalRemainingPomodoros * (workDuration + shortBreak);
+    const totalRemainingPomodoros = incompleteTasks.reduce(
+        (acc, t) => acc + (t.estimatedPomodoros - t.completedPomodoros), 0
+    );
 
     const finishTime = useMemo(() => {
-        return new Date(Date.now() + totalMinutes * 60000);
-    }, [totalMinutes]);
+        const workDuration = settings.durations.work;
+        const shortBreak = settings.durations.shortBreak;
+        const longEvery = settings.longBreakInterval;
+        let total = 0;
+        let pomosProcessed = completedStudies;
+
+        for (let i = 0; i < totalRemainingPomodoros; i++) {
+            total += i === 0 ? secondsLeft / 60 : workDuration;
+            if (i < totalRemainingPomodoros - 1) {
+                pomosProcessed += 1;
+                total += pomosProcessed % longEvery === 0
+                    ? settings.durations.longBreak
+                    : shortBreak;
+            }
+        }
+
+        return new Date(Date.now() + total * 60000);
+    }, [tasks, completedStudies, secondsLeft, settings]);
 
     const calculatedTimeStr = finishTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
