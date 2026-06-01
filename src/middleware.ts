@@ -11,6 +11,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',
+  '/privacy', // Legal pages must be reachable without an account
+  '/terms',
   '/' // Landing page is public
 ]);
 

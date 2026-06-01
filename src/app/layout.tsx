@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ClerkProvider } from '@clerk/nextjs'
 import { CustomUserMenu } from "@/components/auth/CustomUserMenu";
 import { ThemeProvider } from "@/hooks/useTheme";
@@ -31,6 +32,15 @@ export default async function RootLayout({
                             <CustomUserMenu isOwner={isOwner} />
                         </header>
                         {children}
+                        <footer className="fixed bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 text-[11px] text-white/30 pointer-events-auto">
+                            <Link href="/privacy" className="hover:text-white/60 transition-colors">
+                                Privacy
+                            </Link>
+                            <span aria-hidden="true">·</span>
+                            <Link href="/terms" className="hover:text-white/60 transition-colors">
+                                Terms
+                            </Link>
+                        </footer>
                     </ThemeProvider>
                 </body>
             </html>

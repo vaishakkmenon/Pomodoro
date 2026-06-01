@@ -6,17 +6,42 @@ import { LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePremium } from "@/hooks/usePremium";
+import { AgeGate } from "@/components/auth/AgeGate";
 
 interface CustomUserMenuProps {
     isOwner?: boolean;
 }
 
+// Once a visitor confirms they meet the minimum age we remember it so returning
+// visitors aren't re-prompted. We store only this boolean — never the birthdate.
+const AGE_VERIFIED_KEY = "pomodoro:ageVerified:v1";
+
 export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
     const { user, isLoaded } = useUser();
     const { signOut, openSignIn } = useClerk();
     const [isOpen, setIsOpen] = useState(false);
+    const [ageGateOpen, setAgeGateOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const { isPremium } = usePremium();
+
+    const handleSignInClick = () => {
+        // Skip the gate for visitors who have already confirmed their age.
+        if (typeof window !== "undefined" && localStorage.getItem(AGE_VERIFIED_KEY) === "true") {
+            openSignIn();
+            return;
+        }
+        setAgeGateOpen(true);
+    };
+
+    const handleAgeConfirmed = () => {
+        try {
+            localStorage.setItem(AGE_VERIFIED_KEY, "true");
+        } catch {
+            /* ignore storage failures */
+        }
+        setAgeGateOpen(false);
+        openSignIn();
+    };
 
     // Close on click outside
     useEffect(() => {
@@ -33,12 +58,19 @@ export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
 
     if (!user) {
         return (
-            <button
-                onClick={() => openSignIn()}
-                className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-full transition-colors text-sm"
-            >
-                Sign In
-            </button>
+            <>
+                <button
+                    onClick={handleSignInClick}
+                    className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-full transition-colors text-sm"
+                >
+                    Sign In
+                </button>
+                <AgeGate
+                    open={ageGateOpen}
+                    onConfirm={handleAgeConfirmed}
+                    onClose={() => setAgeGateOpen(false)}
+                />
+            </>
         );
     }
 
