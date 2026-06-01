@@ -14,7 +14,9 @@ interface CustomUserMenuProps {
 
 // Once a visitor confirms they meet the minimum age we remember it so returning
 // visitors aren't re-prompted. We store only this boolean — never the birthdate.
-const AGE_VERIFIED_KEY = "pomodoro:ageVerified:v1";
+// Bump the version suffix to invalidate previously-stored flags (e.g. v1 was set
+// by the old sign-in gate and would otherwise skip the new sign-up gate).
+const AGE_VERIFIED_KEY = "pomodoro:ageVerified:v2";
 
 export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
     const { user, isLoaded } = useUser();
