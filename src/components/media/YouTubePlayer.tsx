@@ -10,11 +10,14 @@ interface YouTubePlayerProps {
 }
 
 export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps) {
-    const [url, setUrl] = useState("https://www.youtube.com/watch?v=jfKfPfyJRdk"); // Lofi Girl default
+    // Default to a stable Lofi Girl VOD rather than the 24/7 live stream, which
+    // YouTube intermittently marks non-embeddable (firing an IFrame API error).
+    const [url, setUrl] = useState("https://www.youtube.com/watch?v=lTRiuFIWV54"); // Lofi Girl — 1 A.M Study Session
     const [isMinimised, setIsMinimised] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLooping, setIsLooping] = useState(true);
     const [inputValue, setInputValue] = useState(url);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     // Duck the player's volume while the completion chime plays. We own the
     // volume (multiplying the user's level by the duck gain) and track manual
@@ -26,6 +29,7 @@ export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps)
     const handleUpdateUrl = (e: React.FormEvent) => {
         e.preventDefault();
         if (inputValue.includes("youtube.com") || inputValue.includes("youtu.be")) {
+            setLoadError(null);
             setUrl(inputValue);
         }
     };
@@ -94,8 +98,24 @@ export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps)
                                 if (typeof v === "number") setBaseVolume(v);
                             }
                         }}
-                        onPlay={() => setIsPlaying(true)}
+                        onReady={() => setLoadError(null)}
+                        onPlay={() => {
+                            setIsPlaying(true);
+                            setLoadError(null);
+                        }}
                         onPause={() => setIsPlaying(false)}
+                        onError={(e) => {
+                            // youtube-video-element surfaces YouTube IFrame errors
+                            // here (and also logs them itself). Show a fallback
+                            // instead of leaving the user staring at a black box.
+                            const mediaError = e.currentTarget?.error;
+                            setLoadError(
+                                mediaError?.code
+                                    ? `This video can't be played here (YouTube error ${mediaError.code}). Try another URL.`
+                                    : "This video can't be played here. Try another URL."
+                            );
+                            setIsPlaying(false);
+                        }}
                         controls={true}
                         config={{
                             youtube: {
@@ -109,6 +129,13 @@ export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps)
                     <div className="flex flex-col items-center justify-center text-white/30 gap-2">
                         <EyeOff className="w-8 h-8" />
                         <span className="text-sm">Audio Playing in Stealth Mode</span>
+                    </div>
+                )}
+
+                {loadError && !isMinimised && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80 text-center px-6">
+                        <p className="text-sm text-white/70">{loadError}</p>
+                        <p className="text-xs text-white/40">Paste a different YouTube link above.</p>
                     </div>
                 )}
             </div>
