@@ -63,6 +63,7 @@ export interface TimerState {
     setSeconds: (n: number) => void;
     atFull: boolean;
     isDone: boolean;
+    isPristine: boolean;
     phaseKind: "study" | "break";
     statusText: string;
     applyCatchup: (elapsed: number) => void;

@@ -63,7 +63,7 @@ export default function Timer({
     const {
         tab, secondsLeft, isRunning,
         start, pause, reset, switchTab, setSeconds,
-        atFull, isDone, phaseKind,
+        isDone, isPristine, phaseKind,
         applyCatchup, setSyncCallback,
     } = timer;
 
@@ -124,7 +124,10 @@ export default function Timer({
     const phaseForAccent: Phase = phaseKind === "study" ? "focus" : "break";
     const chipText = `${LABELS[tab]}${isDone ? " — Finished" : isRunning ? "" : " — Paused"}`;
     const startDisabled = isDone && !isRunning;
-    const resetDisabled = atFull;
+    // Reset wipes the whole cycle (back to a fresh Study #1), so it's available
+    // whenever there is any progress to clear — not only when the current phase
+    // has been touched.
+    const resetDisabled = isPristine;
     const cardWidth = menuOpen ? "w-[min(90vw,36rem)]" : "w-[min(90vw,32rem)]";
 
     const chipAccent = isDone

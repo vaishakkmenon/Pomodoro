@@ -94,6 +94,15 @@ export function usePomodoroTimer(opts: Options = {}) {
 
     const tickRef = useRef<number | null>(null);
 
+    // Absolute wall-clock timestamp (ms) at which the current phase hits zero.
+    // This — not the number of interval ticks — is the source of truth for the
+    // countdown. Browsers throttle/suspend setInterval in background tabs, so a
+    // tick-counting timer drifts whenever the page is hidden. By deriving the
+    // remaining time from `deadline - Date.now()` we stay correct no matter how
+    // few ticks actually fired while we were away.
+    // null whenever the timer is not actively counting down (paused/idle).
+    const deadlineRef = useRef<number | null>(null);
+
     // We need a ref for secondsLeft so the interval can read the latest value
     // without needing to be recreated on every tick (which would be messy).
     const secondsRef = useRef(secondsLeft);
@@ -109,66 +118,96 @@ export function usePomodoroTimer(opts: Options = {}) {
         }
         if (!isRunning) return;
 
-        tickRef.current = window.setInterval(() => {
-            const current = secondsRef.current;
+        // Anchor the deadline the first time we start counting down for this
+        // phase. Subsequent effect re-runs (settings/tab changes) keep the
+        // existing deadline so the countdown stays continuous, and an auto-start
+        // phase transition carries its own deadline forward (see below).
+        if (deadlineRef.current === null) {
+            deadlineRef.current = Date.now() + secondsRef.current * 1000;
+        }
 
-            if (current <= 1) {
-                // Timer Logic: Timer Completed
-                // We perform the logic HERE, once per tick, instead of inside the setter.
+        // Reconcile the displayed time against the wall clock. Called on every
+        // interval tick AND whenever the tab becomes visible/focused again, so
+        // returning to a backgrounded tab instantly shows the correct value.
+        const tick = () => {
+            if (deadlineRef.current === null) return;
 
-                const prevTab = tab;
-
-                if (settings?.notifications.enabled) {
-                    sendNotification(
-                        prevTab === "study" ? "Focus session complete!" : "Break over!",
-                        prevTab === "study" ? "Time for a break." : "Ready to focus?"
-                    );
-                }
-                if (settings?.sound.enabled) {
-                    chimePlayer.play(settings.sound.volume);
-                }
-
-                const shouldAutoStart = settings?.autoStart ?? false;
-                if (!shouldAutoStart) {
-                    setIsRunning(false);
-                    // Sync: Pause music if not auto-starting
-                    syncRef.current?.("PAUSED");
-                }
-
-                if (prevTab === "study") {
-                    completedStudies.current += 1;
-                    const isLong = completedStudies.current % longEvery === 0;
-                    const next: Tab = isLong ? "long" : "short";
-
-                    setTab(next);
-                    setSecondsLeft(durationMap[next]);
-                    // Note: setSecondsLeft updates the state, which updates secondsRef via the effect above.
-                    // But for this tick, we are done.
-
-                    // Sync: Switch to Break music
-                    if (shouldAutoStart) {
-                        syncRef.current?.("BREAK");
-                    }
-                } else {
-                    setTab("study");
-                    setSecondsLeft(durationMap["study"]);
-                    // Sync: Switch to Focus music
-                    if (shouldAutoStart) {
-                        syncRef.current?.("FOCUS");
-                    }
-                }
-                onComplete?.(prevTab);
-            } else {
-                // Just tick down
-                setSecondsLeft(s => s - 1);
+            const remaining = Math.round((deadlineRef.current - Date.now()) / 1000);
+            if (remaining > 0) {
+                setSecondsLeft(remaining);
+                return;
             }
-        }, 1000);
+
+            // Phase complete.
+            const prevTab = tab;
+
+            if (settings?.notifications.enabled) {
+                sendNotification(
+                    prevTab === "study" ? "Focus session complete!" : "Break over!",
+                    prevTab === "study" ? "Time for a break." : "Ready to focus?"
+                );
+            }
+            if (settings?.sound.enabled) {
+                chimePlayer.play(settings.sound.volume);
+            }
+
+            const shouldAutoStart = settings?.autoStart ?? false;
+
+            // Determine the next phase.
+            let next: Tab;
+            if (prevTab === "study") {
+                completedStudies.current += 1;
+                const isLong = completedStudies.current % longEvery === 0;
+                next = isLong ? "long" : "short";
+            } else {
+                next = "study";
+            }
+
+            if (shouldAutoStart) {
+                // Carry the deadline forward from the phase that just ended (not
+                // from "now"), so a long absence catches up across phases on the
+                // next ticks instead of restarting the clock.
+                deadlineRef.current = deadlineRef.current + durationMap[next] * 1000;
+                const nextRemaining = Math.max(
+                    0,
+                    Math.min(durationMap[next], Math.round((deadlineRef.current - Date.now()) / 1000))
+                );
+                setTab(next);
+                setSecondsLeft(nextRemaining);
+                syncRef.current?.(next === "study" ? "FOCUS" : "BREAK");
+            } else {
+                // Stop at the start of the next phase, paused, full duration.
+                deadlineRef.current = null;
+                setIsRunning(false);
+                setTab(next);
+                setSecondsLeft(durationMap[next]);
+                syncRef.current?.("PAUSED");
+            }
+
+            onComplete?.(prevTab);
+        };
+
+        // Reconcile immediately (covers the case where the deadline already
+        // passed while the tab was hidden and this effect is only running now).
+        tick();
+
+        tickRef.current = window.setInterval(tick, 1000);
+
+        const onVisible = () => {
+            if (document.visibilityState === "visible") tick();
+        };
+        document.addEventListener("visibilitychange", onVisible);
+        window.addEventListener("focus", onVisible);
+        window.addEventListener("pageshow", onVisible);
 
         return () => {
             if (tickRef.current) {
                 clearInterval(tickRef.current);
                 tickRef.current = null;
             }
+            document.removeEventListener("visibilitychange", onVisible);
+            window.removeEventListener("focus", onVisible);
+            window.removeEventListener("pageshow", onVisible);
         };
     }, [isRunning, tab, longEvery, onComplete, durationMap, settings]);
 
@@ -179,6 +218,13 @@ export function usePomodoroTimer(opts: Options = {}) {
     };
 
     const pause = () => {
+        // Snapshot the precise remaining time from the wall clock before tearing
+        // down the deadline, so the paused/persisted value is accurate.
+        if (deadlineRef.current !== null) {
+            const remaining = Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000));
+            setSecondsLeft(remaining);
+        }
+        deadlineRef.current = null;
         setIsRunning(false);
         // Sync: Pause music
         syncRef.current?.("PAUSED");
@@ -189,6 +235,7 @@ export function usePomodoroTimer(opts: Options = {}) {
             clearInterval(tickRef.current);
             tickRef.current = null;
         }
+        deadlineRef.current = null;
         setIsRunning(false);
         setTab("study");
         setSecondsLeft(durationMap["study"]);
@@ -202,6 +249,7 @@ export function usePomodoroTimer(opts: Options = {}) {
             clearInterval(tickRef.current);
             tickRef.current = null;
         }
+        deadlineRef.current = null;
         setIsRunning(false);
         setTab(t);
         setSecondsLeft(durationMap[t]);
@@ -210,6 +258,7 @@ export function usePomodoroTimer(opts: Options = {}) {
     };
 
     const setSeconds = (n: number) => {
+        deadlineRef.current = null;
         setIsRunning(false);
         const clamped = Math.max(0, Math.min(MAX_TIMER_SECONDS, Math.floor(n)));
         setSecondsLeft(clamped);
@@ -226,6 +275,9 @@ export function usePomodoroTimer(opts: Options = {}) {
             clearInterval(tickRef.current);
             tickRef.current = null;
         }
+        // Re-anchor: the ticking effect will set a fresh deadline from the
+        // post-catch-up remaining once we flip isRunning on below.
+        deadlineRef.current = null;
 
         let e = e0;
         let t = tab;
@@ -266,6 +318,14 @@ export function usePomodoroTimer(opts: Options = {}) {
     const phaseKind: PhaseKind = tab === "study" ? "study" : "break";
     const statusText = isDone ? "Finished" : isRunning ? "Running" : atFull ? "Ready" : "Paused";
 
+    // The whole process is untouched: first Study phase, full duration, never run,
+    // no completed sessions. When this is false there is progress worth resetting.
+    const isPristine =
+        tab === "study" &&
+        completedStudies.current === 0 &&
+        atFull &&
+        !isRunning;
+
     return {
         tab,
         secondsLeft,
@@ -278,6 +338,7 @@ export function usePomodoroTimer(opts: Options = {}) {
         setSeconds,
         atFull,
         isDone,
+        isPristine,
         phaseKind,
         statusText,
         applyCatchup,
