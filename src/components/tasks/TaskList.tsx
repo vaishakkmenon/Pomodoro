@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Task } from "@/types/task";
 import { TaskItem } from "./TaskItem";
 import { Plus } from "lucide-react";
@@ -30,7 +30,9 @@ export function TaskList({ tasks, activeTaskId, secondsLeft, completedStudies, a
         (acc, t) => acc + (t.estimatedPomodoros - t.completedPomodoros), 0
     );
 
-    const finishTime = useMemo(() => {
+    // Total remaining work (in minutes) across all incomplete tasks. Depends only
+    // on the schedule inputs, not on the wall clock.
+    const remainingMinutes = useMemo(() => {
         const workDuration = settings.durations.work;
         const shortBreak = settings.durations.shortBreak;
         const longEvery = settings.longBreakInterval;
@@ -47,8 +49,25 @@ export function TaskList({ tasks, activeTaskId, secondsLeft, completedStudies, a
             }
         }
 
-        return new Date(Date.now() + total * 60000);
-    }, [tasks, completedStudies, secondsLeft, settings]);
+        return total;
+    }, [totalRemainingPomodoros, completedStudies, secondsLeft, settings]);
+
+    // A once-per-second clock so the estimate is `now + remaining` and updates
+    // on a steady cadence rather than re-reading Date.now() on every render.
+    // While the timer runs, `remainingMinutes` shrinks as `now` advances, so the
+    // finish time stays put; while paused, it drifts later in real time.
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        if (totalRemainingPomodoros <= 0) return;
+        setNow(Date.now());
+        const id = window.setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, [totalRemainingPomodoros]);
+
+    const finishTime = useMemo(
+        () => new Date(now + remainingMinutes * 60000),
+        [now, remainingMinutes]
+    );
 
     const calculatedTimeStr = finishTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 

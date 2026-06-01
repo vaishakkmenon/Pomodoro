@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { cx } from "@/ui/cx";
 import { CloudRain, Trees, Coffee, Flame, Volume2, VolumeX } from "lucide-react";
+import { useDuck } from "@/hooks/useDuck";
 
 interface Sound {
     id: string;
@@ -25,6 +26,10 @@ export function AmbientPlayer() {
     // Audio refs
     const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
 
+    // Duck multiplier (0..1) applied while the completion chime plays. It scales
+    // the applied volume without altering each sound's stored user volume.
+    const duckGain = useDuck();
+
     // Sync state with audio elements
     useEffect(() => {
         SOUNDS.forEach((sound) => {
@@ -41,14 +46,14 @@ export function AmbientPlayer() {
                 if (audio.paused) {
                     audio.play().catch(e => console.warn("Audio play failed:", e));
                 }
-                audio.volume = state.volume;
+                audio.volume = state.volume * duckGain;
             } else {
                 if (!audio.paused) {
                     audio.pause();
                 }
             }
         });
-    }, [states]);
+    }, [states, duckGain]);
 
     // Cleanup on unmount
     useEffect(() => {

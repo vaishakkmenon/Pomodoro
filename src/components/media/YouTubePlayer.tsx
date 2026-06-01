@@ -2,6 +2,7 @@ import ReactPlayer from "react-player";
 import { Maximize2, Minimize2, Repeat, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { cx } from "@/ui/cx";
+import { useDuck } from "@/hooks/useDuck";
 
 interface YouTubePlayerProps {
     isWide: boolean;
@@ -14,6 +15,13 @@ export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps)
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLooping, setIsLooping] = useState(true);
     const [inputValue, setInputValue] = useState(url);
+
+    // Duck the player's volume while the completion chime plays. We own the
+    // volume (multiplying the user's level by the duck gain) and track manual
+    // volume changes via onVolumeChange — but only while not ducking, so the
+    // volume changes we trigger ourselves don't get mistaken for user input.
+    const duckGain = useDuck();
+    const [baseVolume, setBaseVolume] = useState(1);
 
     const handleUpdateUrl = (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,6 +85,15 @@ export function YouTubePlayer({ isWide, toggleTheaterMode }: YouTubePlayerProps)
                         height="100%"
                         loop={isLooping}
                         playing={isPlaying}
+                        volume={baseVolume * duckGain}
+                        onVolumeChange={(e) => {
+                            // Only capture user-driven changes (gain === 1 means
+                            // we're not mid-duck and the element volume equals base).
+                            if (duckGain === 1) {
+                                const v = e.currentTarget.volume;
+                                if (typeof v === "number") setBaseVolume(v);
+                            }
+                        }}
                         onPlay={() => setIsPlaying(true)}
                         onPause={() => setIsPlaying(false)}
                         controls={true}

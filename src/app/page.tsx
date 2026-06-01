@@ -14,7 +14,6 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { useSettings } from "@/hooks/useSettings";
 import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
 import { usePersistence, PERSIST_KEY } from "@/hooks/usePersistence";
-import { useChime } from "@/hooks/useChime";
 
 
 export default function Home() {
@@ -40,9 +39,6 @@ export default function Home() {
     const [timerMenuOpen, setTimerMenuOpen] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
 
-    // Audio
-    const { play: playChime } = useChime("/sounds/chime_1.mp3", settings.sound.volume);
-
     // Global Progress Calculation
     const totalEst = tasks.reduce((acc, t) => acc + t.estimatedPomodoros, 0);
     const totalDone = tasks.reduce((acc, t) => acc + t.completedPomodoros, 0);
@@ -52,10 +48,8 @@ export default function Home() {
     const timerState = usePomodoroTimer({
         settings,
         onComplete: (prev) => {
-            // Play sound
-            if (prev === "study" && settings.sound.enabled) {
-                playChime();
-            }
+            // The completion chime is played (and ducks background media) inside
+            // usePomodoroTimer for every phase; see chimePlayer in lib/audio.ts.
 
             // Increment task
             if (prev === "study" && activeTaskId) {
@@ -188,6 +182,8 @@ export default function Home() {
                     <TaskList
                         tasks={tasks}
                         activeTaskId={activeTaskId}
+                        secondsLeft={secondsLeft}
+                        completedStudies={completedStudies}
                         addTask={addTask}
                         deleteTask={deleteTask}
                         toggleTask={(id) => {
