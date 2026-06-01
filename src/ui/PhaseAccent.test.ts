@@ -9,17 +9,19 @@ describe("phaseAccent", () => {
         expect(result).toContain("focus-visible:ring-red-500");
     });
 
-    it("returns focus/emerald classes for focus accent", () => {
+    it("returns the focus accent (accent-primary) classes for focus accent", () => {
         const result = phaseAccent("focus");
-        expect(result).toContain("bg-emerald-500");
-        expect(result).toContain("hover:bg-emerald-400");
-        expect(result).toContain("focus-visible:ring-emerald-400");
+        expect(result).toContain("bg-[var(--accent-primary)]");
+        expect(result).toContain("hover:bg-[var(--accent-primary)]");
+        expect(result).toContain("focus-visible:ring-[var(--accent-primary)]");
+        expect(result).toContain("text-[var(--accent-primary)]");
     });
 
-    it("returns break/sky classes for break accent", () => {
+    it("returns the break accent (accent-break) classes for break accent", () => {
         const result = phaseAccent("break");
-        expect(result).toContain("bg-sky-500");
-        expect(result).toContain("hover:bg-sky-400");
-        expect(result).toContain("focus-visible:ring-sky-400");
+        expect(result).toContain("bg-[var(--accent-break)]");
+        expect(result).toContain("hover:bg-[var(--accent-break)]");
+        expect(result).toContain("focus-visible:ring-[var(--accent-break)]");
+        expect(result).toContain("text-[var(--accent-break)]");
     });
 });

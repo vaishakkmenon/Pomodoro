@@ -15,16 +15,16 @@ describe("PillButton", () => {
         render(<PillButton phase="focus">Focus Button</PillButton>);
 
         const button = screen.getByRole("button");
-        // Check that it has some focus-related class
-        expect(button.className).toContain("emerald");
+        // Focus accent maps to the --accent-primary CSS variable
+        expect(button.className).toContain("accent-primary");
     });
 
     it("applies break phase accent styling", () => {
         render(<PillButton phase="break">Break Button</PillButton>);
 
         const button = screen.getByRole("button");
-        // Check that it has break-related class
-        expect(button.className).toContain("sky");
+        // Break accent maps to the --accent-break CSS variable
+        expect(button.className).toContain("accent-break");
     });
 
     it("applies danger variant styling", () => {

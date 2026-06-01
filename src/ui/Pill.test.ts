@@ -10,12 +10,12 @@ describe("pill", () => {
 
     it("includes phase accent classes for focus", () => {
         const result = pill("focus");
-        expect(result).toContain("bg-emerald-500");
+        expect(result).toContain("bg-[var(--accent-primary)]");
     });
 
     it("includes phase accent classes for break", () => {
         const result = pill("break");
-        expect(result).toContain("bg-sky-500");
+        expect(result).toContain("bg-[var(--accent-break)]");
     });
 
     it("includes phase accent classes for danger", () => {

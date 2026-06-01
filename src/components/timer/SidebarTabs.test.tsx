@@ -105,14 +105,14 @@ describe("SidebarTabs", () => {
         render(<TestWrapper tab="study" />);
 
         const studyTab = screen.getByRole("tab", { name: "Study Time" });
-        expect(studyTab.className).toContain("emerald");
+        expect(studyTab.className).toContain("accent-primary");
     });
 
     it("applies correct accent color for break tabs", () => {
         render(<TestWrapper tab="short" />);
 
         const shortTab = screen.getByRole("tab", { name: "Short Break" });
-        expect(shortTab.className).toContain("sky");
+        expect(shortTab.className).toContain("accent-break");
     });
 
     it("has proper accessibility attributes", () => {
