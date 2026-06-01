@@ -18,16 +18,26 @@ const AGE_VERIFIED_KEY = "pomodoro:ageVerified:v1";
 
 export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
     const { user, isLoaded } = useUser();
-    const { signOut, openSignIn } = useClerk();
+    const { signOut, openSignIn, openSignUp } = useClerk();
     const [isOpen, setIsOpen] = useState(false);
     const [ageGateOpen, setAgeGateOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const { isPremium } = usePremium();
 
-    const handleSignInClick = () => {
-        // Skip the gate for visitors who have already confirmed their age.
+    // Sign-in is for existing users, who already cleared the age gate when they
+    // created their account — so it opens directly, no gate. We hide the in-modal
+    // "Sign up" link so account creation can only happen through the gated path.
+    const handleSignIn = () => {
+        openSignIn({
+            appearance: { elements: { footerAction__signUp: { display: "none" } } },
+        });
+    };
+
+    // Sign-up creates an account, so it must clear the age gate first — unless the
+    // visitor already confirmed their age on this device.
+    const handleSignUpClick = () => {
         if (typeof window !== "undefined" && localStorage.getItem(AGE_VERIFIED_KEY) === "true") {
-            openSignIn();
+            openSignUp();
             return;
         }
         setAgeGateOpen(true);
@@ -40,7 +50,7 @@ export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
             /* ignore storage failures */
         }
         setAgeGateOpen(false);
-        openSignIn();
+        openSignUp();
     };
 
     // Close on click outside
@@ -59,12 +69,20 @@ export function CustomUserMenu({ isOwner = false }: CustomUserMenuProps) {
     if (!user) {
         return (
             <>
-                <button
-                    onClick={handleSignInClick}
-                    className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-full transition-colors text-sm"
-                >
-                    Sign In
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleSignIn}
+                        className="text-white/70 hover:text-white font-medium px-4 py-2 rounded-full transition-colors text-sm"
+                    >
+                        Sign In
+                    </button>
+                    <button
+                        onClick={handleSignUpClick}
+                        className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-full transition-colors text-sm"
+                    >
+                        Sign Up
+                    </button>
+                </div>
                 <AgeGate
                     open={ageGateOpen}
                     onConfirm={handleAgeConfirmed}
